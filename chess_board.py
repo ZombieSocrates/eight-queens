@@ -205,8 +205,6 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
     
 def move_queen_to_column(move_queen_index, current_queen_locations,
     dest_column, chess_board):
-    if dest_column is None:
-        print("We should probably catch this error earlier")
     queen_start_pos = current_queen_locations[move_queen_index]
     chess_board[queen_start_pos[0]][queen_start_pos[1]] = 0
     chess_board[queen_start_pos[0]][dest_column] = 1
@@ -221,17 +219,39 @@ def choose_a_queen_to_move(queens_to_avoid, dim = 8):
 
 
 if __name__ == "__main__":
-    # At this point, all of this is starting to look like a class ...
+    # At this point, all of this is starting to look like a class
+    # The number of unconflicted queens, the queen locations are all
+    # pieces of data about that class
     dat_board = make_chess_board(queen_loc_seed = 42)
     unconf_queens = []
+    steps_taken = 0
+    print("Here's what we're starting with ...")
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
-    check_if_solved(q_locs, verbose = True)
-    print(f"Finding min conflict column for queen 0")
-    new_col = find_best_column_for_queen(focus_queen_index = 0, 
-        current_queen_locations = q_locs, unconflicted_queens = unconf_queens, 
-        verbose = True)
-    move_queen_to_column(move_queen_index = 0, current_queen_locations = q_locs, 
-        dest_column = new_col, chess_board = dat_board)
-    next_queen = choose_a_queen_to_move(queens_to_avoid = unconf_queens)
-    ipdb.set_trace()
+    is_solved = check_if_solved(q_locs, verbose = True)
+    while not is_solved:
+        mv_queen = choose_a_queen_to_move(queens_to_avoid = unconf_queens)
+        print(f"Finding min conflict column for queen {mv_queen}")
+        new_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
+            current_queen_locations = q_locs, 
+            unconflicted_queens = unconf_queens, 
+            verbose = True)
+        # The function above returns None if the chosen queen is already in 
+        # a zero conflict position. Right now this continue syntax is 
+        # janky shorthand for: just pick another queen.
+        if new_col is None:
+            continue
+        move_queen_to_column(move_queen_index = mv_queen, 
+            current_queen_locations = q_locs, dest_column = new_col, 
+            chess_board = dat_board)
+        steps_taken += 1
+        display_chess_board(dat_board)
+        is_solved = check_if_solved(q_locs, verbose = True)
+        ipdb.set_trace()
+    print(f"We solved the eight queens problem in {steps_taken} steps")
+
+
+
+    # TODO: Other odd behaviors we're not actually accounting for
+    #    - I think it's possible to "move" a queen to the same spot it's already in
+    #    - I have also seen this thing get caught in an infinite loop at least once XD
