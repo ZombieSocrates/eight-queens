@@ -173,7 +173,7 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
     the lowest number of conflicts.
 
     TODO: Checking rows isn't necessary becasue of how I set up the
-    problem right now...but it might be good to include
+    problem right now...might be good to include for due diligence?
     '''
     focus_queen_pos = current_queen_locations[focus_queen_index]
     queen_coords = [v for v in current_queen_locations.values()]
@@ -192,11 +192,13 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
         diag_conf = set(diags).intersection(set(other_queens))
         conflicts_by_col[k] += len(diag_conf)
     min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
+    curr_conflict = conflicts_by_col[focus_queen_pos[1]]
     if verbose:
-        print(f"Queen {focus_queen_index} is now at {focus_queen_pos}.")
+        print(f"Queen {focus_queen_index} is now at {focus_queen_pos} ")
+        print(f"where it is causing {curr_conflict} conflicts.")
         print(f"Moving it to column {min_conflict[0]} ")
         print(f"creates {min_conflict[1]} conflicts.")
-    return min_conflict[0]
+    return min_conflict[0] if curr_conflict > 0 else None
 
     
 
@@ -206,10 +208,8 @@ if __name__ == "__main__":
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
     check_if_solved(q_locs, verbose = True)
-    # print("Extra check on the diagonals")
-    # ipdb.set_trace()
-    # count_diagonal_conflicts(q_locs, verbose = True)
-    test_idx = 0
-    print(f"Finding min conflict column for queen {test_idx}")
-    find_best_column_for_queen(focus_queen_index = test_idx, 
-        current_queen_locations = q_locs, verbose = True)
+    for i in range(8):
+        print(f"Finding min conflict column for queen {i}")
+        find_best_column_for_queen(focus_queen_index = i, 
+            current_queen_locations = q_locs, verbose = True)
+        ipdb.set_trace()
