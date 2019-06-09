@@ -201,6 +201,20 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
     return min_conflict[0] if curr_conflict > 0 else None
 
     
+def move_queen_to_column(move_queen_index, current_queen_locations,
+    dest_column, chess_board):
+    if dest_column is None:
+        print("We should probably catch this error earlier")
+    queen_start_pos = current_queen_locations[move_queen_index]
+    chess_board[queen_start_pos[0]][queen_start_pos[1]] = 0
+    chess_board[queen_start_pos[0]][dest_column] = 1
+    current_queen_locations[move_queen_index] = (queen_start_pos[0], dest_column)
+
+
+def choose_a_queen_to_move():
+    '''I think this is the only missing piece of the solver...
+    '''
+    pass
 
 
 if __name__ == "__main__":
@@ -208,8 +222,9 @@ if __name__ == "__main__":
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
     check_if_solved(q_locs, verbose = True)
-    for i in range(8):
-        print(f"Finding min conflict column for queen {i}")
-        find_best_column_for_queen(focus_queen_index = i, 
-            current_queen_locations = q_locs, verbose = True)
-        ipdb.set_trace()
+    print(f"Finding min conflict column for queen 0")
+    new_col = find_best_column_for_queen(focus_queen_index = 0, 
+        current_queen_locations = q_locs, verbose = True)
+    move_queen_to_column(move_queen_index = 0, current_queen_locations = q_locs, 
+        dest_column = new_col, chess_board = dat_board)
+    ipdb.set_trace()
