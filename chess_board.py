@@ -71,37 +71,37 @@ def count_col_conflicts(queen_locations):
     return sum([v - 1 for v in col_counts.values()])
 
 
-def move_up_and_left(queen_location):
-    new_location = queen_location[0] - 1, queen_location[1] - 1
-    if (new_location[0] >= 0) and (new_location[1] >= 0):
-        return new_location
+def move_up_and_left(coord):
+    new_coord = coord[0] - 1, coord[1] - 1
+    if (new_coord[0] >= 0) and (new_coord[1] >= 0):
+        return new_coord
     return None
 
 
-def move_up_and_right(queen_location):
+def move_up_and_right(coord):
     '''get rid of hard-coded n-queens minus 1
     '''
-    new_location = queen_location[0] - 1, queen_location[1] + 1
-    if (new_location[0] >= 0) and (new_location[1] <= 7):
-        return new_location
+    new_coord = coord[0] - 1, coord[1] + 1
+    if (new_coord[0] >= 0) and (new_coord[1] <= 7):
+        return new_coord
     return None
 
 
-def move_down_and_right(queen_location):
+def move_down_and_right(coord):
     '''get rid of hard-coded n-queens minus 1
     '''
-    new_location = queen_location[0] + 1, queen_location[1] + 1
-    if (new_location[0] <= 7) and (new_location[1] <= 7):
-        return new_location
+    new_coord = coord[0] + 1, coord[1] + 1
+    if (new_coord[0] <= 7) and (new_coord[1] <= 7):
+        return new_coord
     return None
 
 
-def move_down_and_left(queen_location):
+def move_down_and_left(coord):
     '''get rid of hard-coded n-queens minus 1
     '''
-    new_location = queen_location[0] + 1, queen_location[1] - 1
-    if (new_location[0] <= 7) and (new_location[1] >= 0):
-        return new_location
+    new_coord = coord[0] + 1, coord[1] - 1
+    if (new_coord[0] <= 7) and (new_coord[1] >= 0):
+        return new_coord
     return None
 
 
@@ -112,10 +112,9 @@ def get_diagonals(q_position):
     diag_checker = {"up_left":move_up_and_left, 
         "up_right":move_up_and_right,
         "down_right":move_down_and_right,
-        "down_left":move_down_and_left,
+        "down_left":move_down_and_left
         }
     for d in diag_checker.keys():
-        print(f"MOVING {d.replace('_',' ')}")
         new_pos = diag_checker[d](q_position)
         if new_pos is None:
             continue
@@ -126,22 +125,52 @@ def get_diagonals(q_position):
     return diags
 
 
-def check_if_solved(queen_locations):
+def count_diagonal_conflicts(queen_locations, verbose = False):
+    '''Right now, this probably doesn't handle double counting properly, but
+    I don't care too much
+    '''
+    in_diag_queens = []
+    locs = [v for v in queen_locations.values()]
+    for i, q in enumerate(locs):
+        diags = set(get_diagonals(q))
+        other_queens = set(locs[0:i] + locs[i+1:])
+        conflict = list(diags.intersection(other_queens))
+        if not conflict:
+            if verbose:
+                print(f"\tNo diagonal conflicts for queen at {q}")
+            continue
+        else:
+            if verbose:
+                print(f"\tQueen at {q} conflicts with these: {conflict}")
+            in_diag_queens.extend(conflict)
+    return len(in_diag_queens)
+
+
+def check_if_solved(queen_locations, verbose = False):
     '''TODO: implement diagonal checks
     '''
     row_conf = count_row_conflicts(queen_locations)
     col_conf = count_col_conflicts(queen_locations)
-    if (row_conf + col_conf) == 0:
-        print("WE SOLVED IT, BRO!!!")
+    diag_conf = count_diagonal_conflicts(queen_locations)
+    if (row_conf + col_conf + diag_conf) == 0:
+        if verbose:
+            print("WE SOLVED IT, BRO!!!")
+        return True
     else:
-        print("Not solved...")
-        print(f"We still have {row_conf} row conflicts")
-        print(f"and {col_conf} column conflicts")
+        if verbose:
+            print("Not solved...")
+            print(f"We have {row_conf} row conflicts, ")
+            print(f"{col_conf} column conflicts, ")
+            print(f"and {diag_conf} conflicts along diagonals.")
+        return False
 
 
 if __name__ == "__main__":
     dat_board = make_chess_board(queen_loc_seed = 42)
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
-    check_if_solved(q_locs)
+    check_if_solved(q_locs, verbose = True)
+    print("Extra check on the diagonals")
+    ipdb.set_trace()
+    count_diagonal_conflicts(q_locs, verbose = True)
     ipdb.set_trace()
