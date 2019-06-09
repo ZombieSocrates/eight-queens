@@ -166,7 +166,7 @@ def check_if_solved(queen_locations, verbose = False):
 
 
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
-    verbose = False):
+    unconflicted_queens, verbose = False):
     '''Assumes that we could only move a queen within the row it's already in, 
     this puts a queen in all columns in that row, sums up the column and 
     diagonal conflicts at each column, and returns the column that results in
@@ -193,6 +193,8 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
         conflicts_by_col[k] += len(diag_conf)
     min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
     curr_conflict = conflicts_by_col[focus_queen_pos[1]]
+    if (min_conflict[1] == 0) or (curr_conflict == 0):
+        unconflicted_queens.append(focus_queen_index)
     if verbose:
         print(f"Queen {focus_queen_index} is now at {focus_queen_pos} ")
         print(f"where it is causing {curr_conflict} conflicts.")
@@ -211,20 +213,25 @@ def move_queen_to_column(move_queen_index, current_queen_locations,
     current_queen_locations[move_queen_index] = (queen_start_pos[0], dest_column)
 
 
-def choose_a_queen_to_move():
+def choose_a_queen_to_move(queens_to_avoid, dim = 8):
     '''I think this is the only missing piece of the solver...
     '''
-    pass
+    poss_queens = [q for q in range(dim) if q not in queens_to_avoid]
+    return random.choice(poss_queens)
 
 
 if __name__ == "__main__":
+    # At this point, all of this is starting to look like a class ...
     dat_board = make_chess_board(queen_loc_seed = 42)
+    unconf_queens = []
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
     check_if_solved(q_locs, verbose = True)
     print(f"Finding min conflict column for queen 0")
     new_col = find_best_column_for_queen(focus_queen_index = 0, 
-        current_queen_locations = q_locs, verbose = True)
+        current_queen_locations = q_locs, unconflicted_queens = unconf_queens, 
+        verbose = True)
     move_queen_to_column(move_queen_index = 0, current_queen_locations = q_locs, 
         dest_column = new_col, chess_board = dat_board)
+    next_queen = choose_a_queen_to_move(queens_to_avoid = unconf_queens)
     ipdb.set_trace()
