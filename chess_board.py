@@ -165,6 +165,63 @@ def check_if_solved(queen_locations, verbose = False):
         return False
 
 
+# GETTING WHICH QUEENS ARE CONFLICTED IS A STEP WE SHOULD DO TO 
+# HELP US CHOOSE 
+
+
+def row_conflicts_by_queen(queen_locations):
+    row_conf_dict = {}
+    for k in queen_locations.keys():
+        this_row = queen_locations[k][0]
+        row_count = [1 for v in queen_locations.values() if v[0] == this_row]
+        row_conf_dict[k] = sum(row_count) - 1
+    return row_conf_dict
+
+
+def column_conflicts_by_queen(queen_locations):
+    '''AARGH IT'S THE SAME AS THE ABOVE JUST WITH A NEW DIMENSION'''
+    col_conf_dict = {}
+    for k in queen_locations.keys():
+        this_col = queen_locations[k][1]
+        col_count = [1 for v in queen_locations.values() if v[1] == this_col]
+        col_conf_dict[k] = sum(col_count) - 1
+    return col_conf_dict
+
+
+def diag_conflicts_by_queen(queen_locations):
+    '''
+    '''
+    diag_conf_dict = {}
+    for k in queen_locations.keys():
+        this_qn = queen_locations[k]
+        diag_sqrs = get_diagonals(this_qn)
+        othr_qns = [q for q in queen_locations.values() if q != this_qn]
+        diag_conf_dict[k] = len(set(diag_sqrs).intersection(set(othr_qns)))
+    return diag_conf_dict
+
+
+def combine_conflict_dicts(conflict_dicts):
+    all_confs = None
+    for conf in conflict_dicts:
+        if all_confs is None:
+            all_confs = conf.copy()
+        for k in conf.keys():
+            all_confs[k] += conf[k]
+    return all_confs
+
+
+def conflicts_by_queen(queen_locations):
+    '''Combine the results of the above three functions, breh'''
+    conf_dicts = [row_conflicts_by_queen(queen_locations), 
+        column_conflicts_by_queen(queen_locations),
+        diag_conflicts_by_queen(queen_locations)]
+    conf_by_qn = combine_conflict_dicts(conf_dicts)
+    for k, v in conf_by_qn.items():
+        if v == 0:
+            del(conf_by_qn[k])
+    return conf_by_qn
+
+
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
     unconflicted_queens, verbose = False):
     '''Assumes that we could only move a queen within the row it's already in, 
@@ -191,6 +248,7 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
         diags = get_diagonals((focus_queen_pos[0],k))
         diag_conf = set(diags).intersection(set(other_queens))
         conflicts_by_col[k] += len(diag_conf)
+    #TODO: Prevent the current queen location from being considered here?
     min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
     curr_conflict = conflicts_by_col[focus_queen_pos[1]]
     if (min_conflict[1] == 0) or (curr_conflict == 0):
@@ -229,6 +287,7 @@ if __name__ == "__main__":
     display_chess_board(dat_board)
     q_locs = locate_the_queens(dat_board)
     is_solved = check_if_solved(q_locs, verbose = True)
+    ipdb.set_trace()
     while not is_solved:
         mv_queen = choose_a_queen_to_move(queens_to_avoid = unconf_queens)
         print(f"Finding min conflict column for queen {mv_queen}")
