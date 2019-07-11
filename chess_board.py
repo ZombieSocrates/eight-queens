@@ -158,10 +158,11 @@ def conflicts_by_queen(queen_locations):
     conf_dicts = [orthogonal_conflicts_by_queen(queen_locations),
         diagonal_conflicts_by_queen(queen_locations)]
     conf_by_qn = combine_conflict_dicts(conf_dicts)
-    for k, v in conf_by_qn.items():
-        if v == 0:
-            del(conf_by_qn[k])
-    return conf_by_qn
+    conf_final = {k:v for k, v in conf_by_qn.items() if v != 0}
+    # for k, v in conf_by_qn.items():
+    #     if v == 0:
+    #         del(conf_by_qn[k])
+    return conf_final
 
 
 def check_if_solved(queen_locations, verbose = False):
@@ -176,14 +177,24 @@ def check_if_solved(queen_locations, verbose = False):
     else:
         if verbose:
             print("Not solved...")
-            print(f"\t{len(queen_locations)} queens still conflicted")
+            print(f"\t{len(conflicted_queens)} queens still conflicted")
             for q, n in conflicted_queens.items():
                 print(f"\tQueen {q} has {n} conflicts")
         return False
 
 
+def find_most_conflicted_queen(current_queen_locations):
+    '''We always want to move the queen that presents the most conflicts in the 
+    current configuration. This sorts conflicted queens and returns the one 
+    that meets that criterion
+    '''
+    conf_by_qn = conflicts_by_queen(current_queen_locations)
+    conf_srt = sorted(conf_by_qn.items(), key = lambda t: t[1], reverse = True) 
+    return conf_srt[0][0]
+
+
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
-    unconflicted_queens, verbose = False):
+    verbose = False):
     '''Assumes that we could only move a queen within the row it's already in, 
     this puts a queen in all columns in that row, sums up the column and 
     diagonal conflicts at each column, and returns the column that results in
@@ -209,16 +220,15 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
         diag_conf = set(diags).intersection(set(other_queens))
         conflicts_by_col[k] += len(diag_conf)
     #TODO: Prevent the current queen location from being considered here?
-    min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
     curr_conflict = conflicts_by_col[focus_queen_pos[1]]
-    if (min_conflict[1] == 0) or (curr_conflict == 0):
-        unconflicted_queens.append(focus_queen_index)
+    del(conflicts_by_col[focus_queen_pos[1]])
+    min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
     if verbose:
         print(f"Queen {focus_queen_index} is now at {focus_queen_pos} ")
         print(f"where it is causing {curr_conflict} conflicts.")
         print(f"Moving it to column {min_conflict[0]} ")
         print(f"creates {min_conflict[1]} conflicts.")
-    return min_conflict[0] if curr_conflict > 0 else None
+    return min_conflict[0] 
 
     
 def move_queen_to_column(move_queen_index, current_queen_locations,
@@ -229,19 +239,11 @@ def move_queen_to_column(move_queen_index, current_queen_locations,
     current_queen_locations[move_queen_index] = (queen_start_pos[0], dest_column)
 
 
-def choose_a_queen_to_move(queens_to_avoid, dim = 8):
-    '''I think this is the only missing piece of the solver...
-    '''
-    poss_queens = [q for q in range(dim) if q not in queens_to_avoid]
-    return random.choice(poss_queens)
-
-
 if __name__ == "__main__":
     # At this point, all of this is starting to look like a class
     # The number of unconflicted queens, the queen locations are all
     # pieces of data about that class
     dat_board = make_chess_board(queen_loc_seed = 42)
-    unconf_queens = []
     steps_taken = 0
     print("Here's what we're starting with ...")
     display_chess_board(dat_board)
@@ -250,17 +252,15 @@ if __name__ == "__main__":
     is_solved = check_if_solved(q_locs, verbose = True)
     ipdb.set_trace()
     while not is_solved:
-        mv_queen = choose_a_queen_to_move(queens_to_avoid = unconf_queens)
+        mv_queen = find_most_conflicted_queen(current_queen_locations = q_locs)
         print(f"Finding min conflict column for queen {mv_queen}")
         new_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
-            current_queen_locations = q_locs, 
-            unconflicted_queens = unconf_queens, 
-            verbose = True)
+            current_queen_locations = q_locs, verbose = True)
         # The function above returns None if the chosen queen is already in 
         # a zero conflict position. Right now this continue syntax is 
         # janky shorthand for: just pick another queen.
-        if new_col is None:
-            continue
+        # if new_col is None:
+        #     continue
         move_queen_to_column(move_queen_index = mv_queen, 
             current_queen_locations = q_locs, dest_column = new_col, 
             chess_board = dat_board)
