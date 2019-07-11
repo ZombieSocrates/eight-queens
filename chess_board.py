@@ -4,6 +4,7 @@ import ipdb
 from pprint import pprint
 from collections import Counter
 
+
 def make_chess_board(dim = 8, queen_loc_seed = None):
     '''Sets up a chessboard by randomly placing a single 
     queen in each row of the board
@@ -49,26 +50,16 @@ def locate_the_queens(chess_board, verbose = True):
         j = search_across_row(chess_row)
         if j is None:
             if verbose:
-                print(f"No queens in row {i}")
+                print(f"\tNo queens in row {i}")
             continue
         else:
             while j is not None:
                 if verbose:
-                    print(f"Queen found at row {i}, column {j}")
+                    print(f"\tQueen found at row {i}, column {j}")
                 queen_locations[queen_count] = (i , j)
                 queen_count += 1 
                 j = search_across_row(chess_row, from_column = j + 1)
     return queen_locations
-
-
-def count_row_conflicts(queen_locations):
-    row_counts = Counter([q[0] for q in queen_locations.values()])
-    return sum([v - 1 for v in row_counts.values()])
-
-
-def count_col_conflicts(queen_locations):
-    col_counts = Counter([q[1] for q in queen_locations.values()])
-    return sum([v - 1 for v in col_counts.values()])
 
 
 def move_up_and_left(coord):
@@ -78,29 +69,29 @@ def move_up_and_left(coord):
     return None
 
 
-def move_up_and_right(coord):
-    '''get rid of hard-coded n-queens minus 1
+def move_up_and_right(coord, dim = 8):
+    '''dim = 8 should probably just be some sort of class attribute
     '''
     new_coord = coord[0] - 1, coord[1] + 1
-    if (new_coord[0] >= 0) and (new_coord[1] <= 7):
+    if (new_coord[0] >= 0) and (new_coord[1] <= (dim - 1)):
         return new_coord
     return None
 
 
-def move_down_and_right(coord):
-    '''get rid of hard-coded n-queens minus 1
+def move_down_and_right(coord, dim = 8):
+    '''dim = 8 should probably just be some sort of class attribute
     '''
     new_coord = coord[0] + 1, coord[1] + 1
-    if (new_coord[0] <= 7) and (new_coord[1] <= 7):
+    if (new_coord[0] <= (dim - 1)) and (new_coord[1] <= (dim - 1)):
         return new_coord
     return None
 
 
-def move_down_and_left(coord):
-    '''get rid of hard-coded n-queens minus 1
+def move_down_and_left(coord, dim = 8):
+    '''dim = 8 should probably just be some sort of class attribute
     '''
     new_coord = coord[0] + 1, coord[1] - 1
-    if (new_coord[0] <= 7) and (new_coord[1] >= 0):
+    if (new_coord[0] <= (dim - 1)) and (new_coord[1] >= 0):
         return new_coord
     return None
 
@@ -125,74 +116,21 @@ def get_diagonals(q_position):
     return diags
 
 
-def count_diagonal_conflicts(queen_locations, verbose = False):
-    '''Right now, this probably doesn't handle double counting properly, but
-    I don't care too much
-    '''
-    in_diag_queens = []
-    locs = [v for v in queen_locations.values()]
-    for i, q in enumerate(locs):
-        diags = set(get_diagonals(q))
-        other_queens = set(locs[0:i] + locs[i+1:])
-        conflict = list(diags.intersection(other_queens))
-        if not conflict:
-            if verbose:
-                print(f"\tNo diagonal conflicts for queen at {q}")
-            continue
-        else:
-            if verbose:
-                print(f"\tQueen at {q} conflicts with these: {conflict}")
-            in_diag_queens.extend(conflict)
-    return len(in_diag_queens)
-
-
-def check_if_solved(queen_locations, verbose = False):
-    '''TODO: implement diagonal checks
-    '''
-    row_conf = count_row_conflicts(queen_locations)
-    col_conf = count_col_conflicts(queen_locations)
-    diag_conf = count_diagonal_conflicts(queen_locations)
-    if (row_conf + col_conf + diag_conf) == 0:
-        if verbose:
-            print("WE SOLVED IT, BRO!!!")
-        return True
-    else:
-        if verbose:
-            print("Not solved...")
-            print(f"We have {row_conf} row conflicts, ")
-            print(f"{col_conf} column conflicts, ")
-            print(f"and {diag_conf} conflicts along diagonals.")
-        return False
-
-
-# GETTING WHICH QUEENS ARE CONFLICTED IS A STEP WE SHOULD DO TO 
-# HELP US CHOOSE 
-
-
-def row_conflicts_by_queen(queen_locations):
-    row_conf_dict = {}
+def orthogonal_conflicts_by_queen(queen_locations):
+    orth_conf_dict = {}
     for k in queen_locations.keys():
-        this_row = queen_locations[k][0]
-        row_count = [1 for v in queen_locations.values() if v[0] == this_row]
-        row_conf_dict[k] = sum(row_count) - 1
-    return row_conf_dict
+        orth_conf_dict[k] = 0
+        for d in [0,1]:
+            curr_d = queen_locations[k][d]
+            d_count = [1 for v in queen_locations.values() if v[d] == curr_d]
+            orth_conf_dict[k] += sum(d_count) - 1
+    return orth_conf_dict
 
 
-def column_conflicts_by_queen(queen_locations):
-    '''AARGH IT'S THE SAME AS THE ABOVE JUST WITH A NEW DIMENSION'''
-    col_conf_dict = {}
-    for k in queen_locations.keys():
-        this_col = queen_locations[k][1]
-        col_count = [1 for v in queen_locations.values() if v[1] == this_col]
-        col_conf_dict[k] = sum(col_count) - 1
-    return col_conf_dict
-
-
-def diag_conflicts_by_queen(queen_locations):
-    '''
-    '''
+def diagonal_conflicts_by_queen(queen_locations):
     diag_conf_dict = {}
     for k in queen_locations.keys():
+        diag_conf_dict[k] = 0
         this_qn = queen_locations[k]
         diag_sqrs = get_diagonals(this_qn)
         othr_qns = [q for q in queen_locations.values() if q != this_qn]
@@ -201,25 +139,47 @@ def diag_conflicts_by_queen(queen_locations):
 
 
 def combine_conflict_dicts(conflict_dicts):
+    '''Helper functioned designed to sum the outputs of orthogonal and 
+    diagonal conflict dicts together.
+    '''
     all_confs = None
     for conf in conflict_dicts:
         if all_confs is None:
             all_confs = conf.copy()
+            continue
         for k in conf.keys():
             all_confs[k] += conf[k]
     return all_confs
 
 
 def conflicts_by_queen(queen_locations):
-    '''Combine the results of the above three functions, breh'''
-    conf_dicts = [row_conflicts_by_queen(queen_locations), 
-        column_conflicts_by_queen(queen_locations),
-        diag_conflicts_by_queen(queen_locations)]
+    '''Combine the results of the above three functions, breh. Then deletes any 
+    queen that does not have any conflicts.'''
+    conf_dicts = [orthogonal_conflicts_by_queen(queen_locations),
+        diagonal_conflicts_by_queen(queen_locations)]
     conf_by_qn = combine_conflict_dicts(conf_dicts)
     for k, v in conf_by_qn.items():
         if v == 0:
             del(conf_by_qn[k])
     return conf_by_qn
+
+
+def check_if_solved(queen_locations, verbose = False):
+    '''Right now, this probably doesn't handle double counting properly, but
+    I don't care too much
+    '''
+    conflicted_queens = conflicts_by_queen(queen_locations)
+    if not conflicted_queens:
+        if verbose:
+            print("WE SOLVED IT, BRO!!!")
+        return True
+    else:
+        if verbose:
+            print("Not solved...")
+            print(f"\t{len(queen_locations)} queens still conflicted")
+            for q, n in conflicted_queens.items():
+                print(f"\tQueen {q} has {n} conflicts")
+        return False
 
 
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
@@ -229,7 +189,7 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
     diagonal conflicts at each column, and returns the column that results in
     the lowest number of conflicts.
 
-    TODO: Checking rows isn't necessary becasue of how I set up the
+    TODO: Checking rows isn't necessary because of how I set up the
     problem right now...might be good to include for due diligence?
     '''
     focus_queen_pos = current_queen_locations[focus_queen_index]
@@ -285,7 +245,8 @@ if __name__ == "__main__":
     steps_taken = 0
     print("Here's what we're starting with ...")
     display_chess_board(dat_board)
-    q_locs = locate_the_queens(dat_board)
+    print("Looking for the queens")
+    q_locs = locate_the_queens(dat_board, verbose = True)
     is_solved = check_if_solved(q_locs, verbose = True)
     ipdb.set_trace()
     while not is_solved:
