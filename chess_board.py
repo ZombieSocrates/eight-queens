@@ -183,14 +183,17 @@ def check_if_solved(queen_locations, verbose = False):
         return False
 
 
-def find_most_conflicted_queen(current_queen_locations):
+def choose_max_conflict_queen(current_queen_locations):
     '''We always want to move the queen that presents the most conflicts in the 
-    current configuration. This sorts conflicted queens and returns the one 
-    that meets that criterion
+    current configuration. This filters the conflicted queens down to those 
+    presenting the maximum number of conflicts, and then chooses one to move
+    from those. The randomness will hopefully prevent us from moving the same 
+    queen over and over again
     '''
     conf_by_qn = conflicts_by_queen(current_queen_locations)
-    conf_srt = sorted(conf_by_qn.items(), key = lambda t: t[1], reverse = True) 
-    return conf_srt[0][0]
+    max_conf = max(conf_by_qn.values())
+    qns_at_max = [k for k in conf_by_qn.keys() if conf_by_qn[k] == max_conf]
+    return random.choice(qns_at_max)
 
 
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
@@ -219,7 +222,6 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
         diags = get_diagonals((focus_queen_pos[0],k))
         diag_conf = set(diags).intersection(set(other_queens))
         conflicts_by_col[k] += len(diag_conf)
-    #TODO: Prevent the current queen location from being considered here?
     curr_conflict = conflicts_by_col[focus_queen_pos[1]]
     del(conflicts_by_col[focus_queen_pos[1]])
     min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
@@ -240,7 +242,9 @@ def move_queen_to_column(move_queen_index, current_queen_locations,
 
 
 if __name__ == "__main__":
-    # At this point, all of this is starting to look like a class
+    # TODO SHORT TERM: actually turn this into a main method
+    
+    # TODO LONG TERM: At this point, all of this is starting to look like a class
     # The number of unconflicted queens, the queen locations are all
     # pieces of data about that class
     dat_board = make_chess_board(queen_loc_seed = 42)
@@ -252,15 +256,10 @@ if __name__ == "__main__":
     is_solved = check_if_solved(q_locs, verbose = True)
     ipdb.set_trace()
     while not is_solved:
-        mv_queen = find_most_conflicted_queen(current_queen_locations = q_locs)
+        mv_queen = choose_max_conflict_queen(current_queen_locations = q_locs)
         print(f"Finding min conflict column for queen {mv_queen}")
         new_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
             current_queen_locations = q_locs, verbose = True)
-        # The function above returns None if the chosen queen is already in 
-        # a zero conflict position. Right now this continue syntax is 
-        # janky shorthand for: just pick another queen.
-        # if new_col is None:
-        #     continue
         move_queen_to_column(move_queen_index = mv_queen, 
             current_queen_locations = q_locs, dest_column = new_col, 
             chess_board = dat_board)
@@ -272,6 +271,10 @@ if __name__ == "__main__":
 
 
 
-    # TODO: Other odd behaviors we're not actually accounting for
-    #    - I think it's possible to "move" a queen to the same spot it's already in
-    #    - I have also seen this thing get caught in an infinite loop at least once XD
+    # TODO: I think (?) the infinite looping behavior I was seeing earlier is addressed. I've
+    # seen this test case solved in 16, 20, or 32 steps. Other odd behaviors we're not 
+    # accounting for and related improvements we might make
+    #    - Implement a maximum number of steps before giving up
+    #    - It seems like there's still a better way to choose which queen to move. Instead of 
+    #    randomly choosing in the case of ties, perhaps we can try to make sure that moving the
+    #    queen actually represents an improvement.
