@@ -159,9 +159,6 @@ def conflicts_by_queen(queen_locations):
         diagonal_conflicts_by_queen(queen_locations)]
     conf_by_qn = combine_conflict_dicts(conf_dicts)
     conf_final = {k:v for k, v in conf_by_qn.items() if v != 0}
-    # for k, v in conf_by_qn.items():
-    #     if v == 0:
-    #         del(conf_by_qn[k])
     return conf_final
 
 
@@ -171,15 +168,14 @@ def check_if_solved(queen_locations, verbose = False):
     '''
     conflicted_queens = conflicts_by_queen(queen_locations)
     if not conflicted_queens:
-        if verbose:
-            print("WE SOLVED IT, BRO!!!")
         return True
     else:
         if verbose:
-            print("Not solved...")
+            print("Not solved yet...")
             print(f"\t{len(conflicted_queens)} queens still conflicted")
             for q, n in conflicted_queens.items():
                 print(f"\tQueen {q} has {n} conflicts")
+            print("\n")
         return False
 
 
@@ -197,7 +193,7 @@ def choose_max_conflict_queen(current_queen_locations):
 
 
 def find_best_column_for_queen(focus_queen_index, current_queen_locations, 
-    verbose = False):
+    curr_step, verbose = False):
     '''Assumes that we could only move a queen within the row it's already in, 
     this puts a queen in all columns in that row, sums up the column and 
     diagonal conflicts at each column, and returns the column that results in
@@ -206,75 +202,81 @@ def find_best_column_for_queen(focus_queen_index, current_queen_locations,
     TODO: Checking rows isn't necessary because of how I set up the
     problem right now...might be good to include for due diligence?
     '''
-    focus_queen_pos = current_queen_locations[focus_queen_index]
-    queen_coords = [v for v in current_queen_locations.values()]
+    this_loc = current_queen_locations[focus_queen_index]
+    all_locs = [v for v in current_queen_locations.values()]
     conflicts_by_col = {k:0 for k in current_queen_locations.keys()}
     # Check columns
-    curr_queens_by_col = Counter(v[1] for v in queen_coords)
+    curr_queens_by_col = Counter(v[1] for v in all_locs)
     for col, q_count in curr_queens_by_col.items():
-        if col == focus_queen_pos[1]:
+        if col == this_loc[1]:
             conflicts_by_col[col] += q_count - 1
         else:
             conflicts_by_col[col] += q_count
     # Check diagonals
-    other_queens = [x for x in queen_coords if x != focus_queen_pos]
+    other_locs = [x for x in all_locs if x != this_loc]
     for k in conflicts_by_col.keys():
-        diags = get_diagonals((focus_queen_pos[0],k))
-        diag_conf = set(diags).intersection(set(other_queens))
+        diags = get_diagonals((this_loc[0],k))
+        diag_conf = set(diags).intersection(set(other_locs))
         conflicts_by_col[k] += len(diag_conf)
-    curr_conflict = conflicts_by_col[focus_queen_pos[1]]
-    del(conflicts_by_col[focus_queen_pos[1]])
-    min_conflict = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
+    conf = conflicts_by_col[this_loc[1]]
+    del(conflicts_by_col[this_loc[1]])
+    min_conf = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
     if verbose:
-        print(f"Queen {focus_queen_index} is now at {focus_queen_pos} ")
-        print(f"where it is causing {curr_conflict} conflicts.")
-        print(f"Moving it to column {min_conflict[0]} ")
-        print(f"creates {min_conflict[1]} conflicts.")
-    return min_conflict[0] 
+        print(f"{curr_step + 1}. Queen at {this_loc} causes {conf} conflicts.")
+        print(f"Moving to column {min_conf[0]} causes {min_conf[1]} conflicts.")
+    return min_conf[0] 
 
     
-def move_queen_to_column(move_queen_index, current_queen_locations,
-    dest_column, chess_board):
+def move_queen_to_column(move_queen_index, dest_column, 
+    current_queen_locations, chess_board):
     queen_start_pos = current_queen_locations[move_queen_index]
     chess_board[queen_start_pos[0]][queen_start_pos[1]] = 0
     chess_board[queen_start_pos[0]][dest_column] = 1
     current_queen_locations[move_queen_index] = (queen_start_pos[0], dest_column)
 
 
+def solve_queens_problem(chess_board, max_steps = 50, verbose = False, 
+    stop_each = None):
+    steps_taken = 0
+    n = len(chess_board)
+    if verbose:
+        print(f"Solving the {n}-queens problem for this board...")
+        display_chess_board(chess_board)
+    q_locs = locate_the_queens(chess_board, verbose = verbose)
+    is_solved = check_if_solved(q_locs, verbose = verbose)
+    while not is_solved and steps_taken <= max_steps:
+        mv_queen = choose_max_conflict_queen(current_queen_locations = q_locs)
+        mv_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
+            current_queen_locations = q_locs, curr_step = steps_taken, 
+            verbose = verbose)
+        move_queen_to_column(move_queen_index = mv_queen, dest_column = mv_col, 
+            current_queen_locations = q_locs, chess_board = chess_board)
+        steps_taken += 1
+        is_solved = check_if_solved(q_locs, verbose = verbose)
+        if isinstance(stop_each, int): 
+            if not is_solved and (steps_taken % stop_each == 0):
+                print(f"Pausing after {steps_taken} steps.")
+                if verbose:
+                    display_chess_board(chess_board)
+                ipdb.set_trace()
+    if is_solved:
+        print(f"We solved the {n}-queens problem in {steps_taken} steps!")
+    else:
+        print(f"We took {max_steps} steps and found no solution...")
+
+
 if __name__ == "__main__":
-    # TODO SHORT TERM: actually turn this into a main method
     
     # TODO LONG TERM: At this point, all of this is starting to look like a class
     # The number of unconflicted queens, the queen locations are all
     # pieces of data about that class
     dat_board = make_chess_board(queen_loc_seed = 42)
-    steps_taken = 0
-    print("Here's what we're starting with ...")
-    display_chess_board(dat_board)
-    print("Looking for the queens")
-    q_locs = locate_the_queens(dat_board, verbose = True)
-    is_solved = check_if_solved(q_locs, verbose = True)
-    ipdb.set_trace()
-    while not is_solved:
-        mv_queen = choose_max_conflict_queen(current_queen_locations = q_locs)
-        print(f"Finding min conflict column for queen {mv_queen}")
-        new_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
-            current_queen_locations = q_locs, verbose = True)
-        move_queen_to_column(move_queen_index = mv_queen, 
-            current_queen_locations = q_locs, dest_column = new_col, 
-            chess_board = dat_board)
-        steps_taken += 1
-        display_chess_board(dat_board)
-        is_solved = check_if_solved(q_locs, verbose = True)
-        ipdb.set_trace()
-    print(f"We solved the eight queens problem in {steps_taken} steps")
-
-
+    solve_queens_problem(chess_board = dat_board, max_steps = 50, 
+        verbose = True, stop_each = 10)
 
     # TODO: I think (?) the infinite looping behavior I was seeing earlier is addressed. I've
     # seen this test case solved in 16, 20, or 32 steps. Other odd behaviors we're not 
     # accounting for and related improvements we might make
-    #    - Implement a maximum number of steps before giving up
     #    - It seems like there's still a better way to choose which queen to move. Instead of 
     #    randomly choosing in the case of ties, perhaps we can try to make sure that moving the
     #    queen actually represents an improvement.
