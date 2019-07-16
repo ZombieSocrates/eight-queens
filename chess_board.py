@@ -237,6 +237,9 @@ def move_queen_to_column(move_queen_index, dest_column,
 
 def solve_queens_problem(chess_board, max_steps = 50, verbose = False, 
     stop_each = None):
+    '''Should this return anything? The number of steps it took and the 
+    solution state is my first guess...
+    '''
     steps_taken = 0
     n = len(chess_board)
     if verbose:
@@ -244,7 +247,7 @@ def solve_queens_problem(chess_board, max_steps = 50, verbose = False,
         display_chess_board(chess_board)
     q_locs = locate_the_queens(chess_board, verbose = verbose)
     is_solved = check_if_solved(q_locs, verbose = verbose)
-    while not is_solved and steps_taken <= max_steps:
+    while not is_solved and steps_taken < max_steps:
         mv_queen = choose_max_conflict_queen(current_queen_locations = q_locs)
         mv_col = find_best_column_for_queen(focus_queen_index = mv_queen, 
             current_queen_locations = q_locs, curr_step = steps_taken, 
@@ -265,18 +268,36 @@ def solve_queens_problem(chess_board, max_steps = 50, verbose = False,
         print(f"We took {max_steps} steps and found no solution...")
 
 
+def solve_many_boards(seed_list, dim_each = 8, steps_each = 50,
+    verbose = False, stop_each = None):
+    bcount = len(seed_list)
+    print(f"Working on {bcount} test cases...")
+    for i, s in enumerate(seed_list):
+        print(f"Case {i+1} of {bcount} (seed {s})")
+        s_board = make_chess_board(dim = dim_each, queen_loc_seed = s)
+        solve_queens_problem(chess_board = s_board, max_steps = steps_each,
+            verbose = verbose, stop_each = stop_each)
+        print("-" * bcount, "\n")
+
+
+
 if __name__ == "__main__":
     
     # TODO LONG TERM: At this point, all of this is starting to look like a class
     # The number of unconflicted queens, the queen locations are all
     # pieces of data about that class
-    dat_board = make_chess_board(queen_loc_seed = 42)
-    solve_queens_problem(chess_board = dat_board, max_steps = 50, 
-        verbose = True, stop_each = 10)
 
-    # TODO: I think (?) the infinite looping behavior I was seeing earlier is addressed. I've
-    # seen this test case solved in 16, 20, or 32 steps. Other odd behaviors we're not 
-    # accounting for and related improvements we might make
-    #    - It seems like there's still a better way to choose which queen to move. Instead of 
+    board_seeds = random.sample([j for j in range(9999)], 10)
+    # board_seeds = [42, 555, 5489, 666, 8675309, 999]
+    # 5489, 8675309, and 999 are known problem children
+    solve_many_boards(seed_list = board_seeds)
+
+
+    # IT WERKS FOR MORE THAN 8 queens....sometimes
+    # dat_board = make_chess_board(dim = 25, queen_loc_seed = 42)
+    # solve_queens_problem(chess_board = dat_board, max_steps = 100, 
+    #     verbose = True, stop_each = 10)
+
+    # TODO: It seems like there's still a better way to choose which queen to move. Instead of 
     #    randomly choosing in the case of ties, perhaps we can try to make sure that moving the
     #    queen actually represents an improvement.
