@@ -207,8 +207,4 @@ class chessBoard(object):
 
 if __name__ == "__main__":
 
-    qB = chessBoard(dimension = 8, queen_seed = 50)
-    qB.display()
-    qB.show_queen_locations()
-    print(qB.get_state_string())
-    ipdb.set_trace()
+    pass
