@@ -7,7 +7,7 @@ from collections import Counter
 class baseSolver(object):
     
 
-    def __init__(self, board_object, max_moves):
+    def __init__(self, board_object, max_moves = 50):
         '''Any solver needs a board configuration that it will presumably 
         solve and a maximum number of moves to make in any solution. We check 
         to see if that initial configuration is already solved, and then build 
@@ -31,7 +31,7 @@ class baseSolver(object):
                 print("Not solved yet...")
                 print(f"\t{len(conflicted_queens)} queens still conflicted")
                 for q, n in conflicted_queens.items():
-                    print(f"\tQueen {q} has {n} conflicts")
+                    print(f"\tQueen in row {q + 1} has {n} conflicts")
                 print("\n")
         return False
 
@@ -75,29 +75,29 @@ class columnwiseCSPSolver(baseSolver):
         A bigger to do...check to make sure that your new state isn't one you 
         have already visited in this solution path
         '''
-        this_loc = self.board.q_locs[focus_queen]
-        all_locs = [v for v in self.board.q_locs.values()]
+        focus_ind = self.board.q_locs[focus_queen]
         conflicts_by_col = {k:0 for k in self.board.q_locs.keys()}
         # Check columns - Also, should this be a standalone function?
-        curr_queens_by_col = Counter(v[1] for v in all_locs)
+        curr_queens_by_col = Counter(v[1] for v in self.board.q_locs.values())
         for col, q_count in curr_queens_by_col.items():
-            if col == this_loc[1]:
+            if col == focus_ind[1]:
                 conflicts_by_col[col] += q_count - 1
             else:
                 conflicts_by_col[col] += q_count
         # Check columns - Also, should this be a standalone function?
-        other_locs = [x for x in all_locs if x != this_loc]
+        other_inds = [x for x in self.board.q_locs.values() if x != focus_ind]
         for k in conflicts_by_col.keys():
-            diags = self.board.get_diagonals((this_loc[0],k))
-            diag_conf = set(diags).intersection(set(other_locs))
+            diags = self.board.get_diagonals((focus_ind[0],k))
+            diag_conf = set(diags).intersection(set(other_inds))
             conflicts_by_col[k] += len(diag_conf)
-        conf = conflicts_by_col[this_loc[1]]
-        del(conflicts_by_col[this_loc[1]])
+        conf = conflicts_by_col[focus_ind[1]]
+        del(conflicts_by_col[focus_ind[1]])
         min_conf = sorted(conflicts_by_col.items(), key = lambda v: v[1])[0]
         # ARE WE ACTUALLY MOVING TO A NEW STATE?
         if verbose:
-            print(f"{curr_step + 1}. Queen at {this_loc} causes {conf} conflicts.")
-            print(f"Moving to column {min_conf[0]} causes {min_conf[1]} conflicts.")
+            focus_loc = (focus_ind[0] + 1, focus_ind[1] + 1)
+            print(f"{curr_step + 1}. Queen at {focus_loc} causes {conf} conflicts.")
+            print(f"Moving to column {min_conf[0] + 1} causes {min_conf[1]} conflicts.")
         return min_conf[0] 
 
 
