@@ -74,7 +74,7 @@ def solve_many_boards(seed_list, dim_each = 8, n_moves = 50,
         game = chessBoard(dimension = dim_each, queen_seed = s)
         player = columnwiseCSPSolver(board_object = game, max_moves = n_moves)
         n_steps = player.solve(verbose = verbose, stop_each = stop_each)
-        player.solution_shortdoc(n_steps)
+        player.solution_shortdoc()
         print("-" * bcount, "\n")
 
 

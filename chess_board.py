@@ -73,18 +73,25 @@ class chessBoard(object):
             print(f"Queen {q + 1} is at row {r + 1}, column {c + 1}")
 
 
-    def get_state_string(self):
-        '''Returns a representation of the chess board's current queen 
-        positions as a (dim*2)-digit string. Every two characters is the row, 
-        column location of a queen. 
+    def get_state_string(self, move_queen = None, to_col = None):
+        '''Returns a representation of the chess board's queen positions as a 
+        (dim*2)-digit string. Every two characters is the row, column location 
+        of a queen in the order they were initially placed on the board. 
 
-        Storing it as a string makes it easier for us to index and 
-        validate ... 
+        Calling this function with no arguments supplied will return the state 
+        of the current queen positions on the board. Supplying the arguments 
+        will returns what the state string would be if you moved a given queen 
+        to a new column position, so we can avoid hitting repeated states.
         '''
-        loc_strs = [f"{v[0] + 1}{v[1] + 1}" for v in self.q_locs.values()]
-        return "".join(loc_strs)
+        loc_strs = []
+        for k, v in self.q_locs.items():
+            if k == move_queen:
+                loc_strs.append(f"{v[0] + 1}{to_col + 1}")
+            else:
+                loc_strs.append(f"{v[0] + 1}{v[1] + 1}")
+        return "".join(loc_strs)   
 
-
+   
     def check_up_and_left(self, coord):
         '''Generate a valid coordinate one unit up and left from coord.
         Would be a private method if python did that ...
