@@ -1,4 +1,3 @@
-import ipdb
 import random
 
 from collections import Counter
@@ -9,7 +8,10 @@ class chessBoard(object):
     def __init__(self, dimension, queen_seed = None):
         '''Sets up a chess board of a specified dimension and randomly 
         places a single queen in each row. Seeding this placement is 
-        supported. '''
+        supported. 
+
+        TODO: If solvers have chessboards passed to them from the front end, 
+        we may need more ways to create a valid board'''
         self.dim = dimension
         self.q_seed = queen_seed
         self.rows = self.place_queens_by_row()
@@ -81,8 +83,7 @@ class chessBoard(object):
         Calling this function with no arguments supplied will return the state 
         of the current queen positions on the board. Supplying the arguments 
         will returns what the state string would be if you moved a given queen 
-        to a new column position, so we can avoid hitting repeated states.
-        '''
+        to a new column position, so we can avoid hitting repeated states. '''
         loc_strs = []
         for k, v in self.q_locs.items():
             if k == move_queen:
@@ -94,8 +95,7 @@ class chessBoard(object):
    
     def check_up_and_left(self, coord):
         '''Generate a valid coordinate one unit up and left from coord.
-        Would be a private method if python did that ...
-        '''
+        Would be a private method if python did that ... '''
         new_coord = coord[0] - 1, coord[1] - 1
         if (new_coord[0] >= 0) and (new_coord[1] >= 0):
             return new_coord
@@ -104,8 +104,7 @@ class chessBoard(object):
 
     def check_up_and_right(self, coord):
         '''Generate a valid coordinate one unit up and right from coord.
-        Would be a private method if python did that ...
-        '''
+        Would be a private method if python did that ... '''
         bound = self.dim - 1
         new_coord = coord[0] - 1, coord[1] + 1
         if (new_coord[0] >= 0) and (new_coord[1] <= bound):
@@ -115,8 +114,7 @@ class chessBoard(object):
 
     def check_down_and_right(self, coord):
         '''Generate a valid coordinate one unit down and right from coord.
-        Would be a private method if python did that ...
-        '''
+        Would be a private method if python did that ... '''
         bound = self.dim - 1
         new_coord = coord[0] + 1, coord[1] + 1
         if (new_coord[0] <= bound) and (new_coord[1] <= bound):
@@ -126,8 +124,7 @@ class chessBoard(object):
 
     def check_down_and_left(self, coord):
         '''Generate a valid coordinate one unit down and left from coord.
-        Would be a private method if python did that ...
-        '''
+        Would be a private method if python did that ... '''
         bound = self.dim - 1
         new_coord = coord[0] + 1, coord[1] - 1
         if (new_coord[0] <= bound) and (new_coord[1] >= 0):
@@ -138,8 +135,7 @@ class chessBoard(object):
     def get_diagonals(self, coord):
         '''Calculates all the relative diagonal positions from the given 
         coordinate, mainly for the purpose of saying "Is there a queen in any 
-        of these diagonal positions?"
-        '''
+        of these diagonal positions?" '''
         diags = []
         diag_checker = {"up_left":self.check_up_and_left, 
             "up_right":self.check_up_and_right,
@@ -163,8 +159,7 @@ class chessBoard(object):
         orthogonal directions (rows or columns).
 
         TODO: Maybe some day disambiguating between row conflicts and column 
-        conflicts will be helpful?
-        '''
+        conflicts will be helpful? '''
         orth_conf_dict = {}
         for k in self.q_locs.keys():
             orth_conf_dict[k] = 0
@@ -178,8 +173,7 @@ class chessBoard(object):
     def count_diagonal_conflicts_by_queen(self):
         '''Returns a dictionary keyed by queen_index (0th queen, 1st queen) 
         with values as the number of conflicts that queen is creating in 
-        diagonal directions.
-        '''
+        diagonal directions. '''
         diag_conf_dict = {}
         for k in self.q_locs.keys():
             this_qn = self.q_locs[k]
@@ -191,8 +185,7 @@ class chessBoard(object):
 
     def combine_conflict_counts(self, conflict_dicts):
         '''Helper functioned designed to sum the outputs of orthogonal and 
-        diagonal conflict dicts together.
-        '''
+        diagonal conflict dicts together. '''
         all_confs = None
         for conf in conflict_dicts:
             if all_confs is None:
@@ -205,7 +198,7 @@ class chessBoard(object):
 
     def count_conflicts_by_queen(self):
         '''Combine the results of the above three methods, breh. Then deletes any 
-        queen key that does not have any conflicts.'''
+        queen key that does not have any conflicts. '''
         conf_dicts = [self.count_orthogonal_conflicts_by_queen(),
             self.count_diagonal_conflicts_by_queen()]
         conf_smash = self.combine_conflict_counts(conf_dicts)
