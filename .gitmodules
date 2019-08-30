@@ -1,0 +1,3 @@
+[submodule "front-end/src/jsboard"]
+	path = front-end/src/jsboard
+	url = https://github.com/danielborowski/jsboard.git
