@@ -10,6 +10,24 @@ file and then turn eightqueens.js into a minimal app
 */
 
 
+// An archetypal board that will render in the browser
+let b = jsboard.board({ attach:"game", size:"8x8", style:"checkerboard" });
+b.cell("each").style({ width:"60px", height:"60px" });
+
+// A generic queen that will get placed in each square.  
+let queen = jsboard.piece({ text:"1", textIndent:"-9999px", 
+    background:"url(src/jsboard/images/chess/queen.png", 
+    width:"50px", height:"50px"});
+
+// let stateString = null;
+// using a fixed state as a test case for moving pieces
+let stateString = "1525384358627583"
+
+placeQueens(b, queen, stateString);
+let foo = getQueenLocations(b);
+
+
+
 /*
 Converts a (dim * 2)-digit string into an array of [row,col]
 coordinates at which to put queens. Maybe @deprecated?
@@ -59,6 +77,9 @@ function locateQueenInRow(rowArray, startIndex = 0) {
 /*
 Calls locateQueenInRow() for every row in the boardObject, 
 returning an object with queen_index: [row_index, col_index]
+
+TODO: This breaks when a queen is in more than one row
+example string = "1112131415161718" 
 */
 function getQueenLocations(boardObj) {
     let qLocs = {};
@@ -100,21 +121,78 @@ function getStateString(boardObj, move_queen = null, move_col = null) {
 }
 
 
-// An archetypal board that will render in the browser
-let b = jsboard.board({ attach:"game", size:"8x8", style:"checkerboard" });
-b.cell("each").style({ width:"60px", height:"60px" });
+/*
+These Move related functions should eventually go into chess/moves.js, I think
 
-// A generic queen that will get placed in each square.  
-let queen = jsboard.piece({ text:"1", textIndent:"-9999px", 
-    background:"url(src/jsboard/images/chess/queen.png", 
-    width:"50px", height:"50px"});
+What I still can't figure out about them
 
-// let stateString = null;
-// using a fixed state as a test case for moving pieces
-let stateString = "1525384358627583"
+    - How to unshade all of the previous cells once a move is completed
+    - How to remove event listenters from previously highlighted cells
+    - How to update qLocs whenever a move is made
+*/
+
+function beginMove(boardObj, coord) {
+    console.log(`YOU CLICKED ${coord}`)
+    // Get dummy available cells until I can pass in getMoves from chess/moves.js
+    let availableCells = [[coord[0] - 1, coord[1]],
+        [coord[0] + 1, coord[1]], 
+        [coord[0], coord[1] - 1],
+        [coord[0], coord[1] + 1]
+        ]
+    availableCells.forEach(function(newCoord) { 
+        boardObj.cell(newCoord).style({"background":"#C1FF33"})
+        console.log(`YOU CAN GO TO ${newCoord}`)
+        boardObj.cell(newCoord).on("click", 
+            function() {completeMove(boardObj, coord, newCoord, queen)})
+        }
+    )  
+}
+
+/*
+Commented out part at the bottom of this was an attempt to recolor the cells...
+It doesn't work.
+*/
+function completeMove(boardObj, startCoord, endCoord, queenObj) {
+    // Move queen to new space, add the listener back in
+    boardObj.cell(endCoord).place(queenObj.clone())
+    boardObj.cell(endCoord).on("click", 
+        function () {beginMove(boardObj, endCoord)}
+        )
+    boardObj.cell(startCoord).rid()
+    console.log(`Moved to state ${getStateString(boardObj)}`)
+    // let priorCells = [[endCoord[0] - 1, endCoord[1]],
+    //     [endCoord[0] + 1, endCoord[1]], 
+    //     [endCoord[0], endCoord[1] - 1],
+    //     [endCoord[0], endCoord[1] + 1]
+    //     ]
+    // priorCells.forEach(function(c){
+    //     if ((c[0] % 2) == (c[1] % 2)) {
+    //         boardObj.cell(c).style({"background":"lightgray"})
+    //         }
+    //     else {boardObj.cell(c).style({"background":"gray"})}
+    //     }
+    // )
+}
 
 
-placeQueens(b, queen, stateString);
-let qLocs = getQueenLocations(b);
-console.log(qLocs);
+
+
+
+
+console.log(foo);
 console.log(getStateString(b));
+
+
+/* add event listeners for every cell with a piece in it. For now, this is just
+console.logging, but eventually we will want to do something along the lines of 
+
+    - invoke the getMoves() function in ./chess/moves.js
+    - highlight all valid moves and add some kind of second click listener
+    - wait for another click to actually move the piece
+*/
+Object.values(foo).forEach(function(coord) {
+    b.cell(coord).on("click", 
+        function() {beginMove(b, coord)}
+        )
+    }
+)
