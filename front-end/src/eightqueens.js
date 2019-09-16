@@ -119,20 +119,19 @@ Places n queens of a type specified by queenObj on the board given by
 boardObj. We either parse the positions from a stateString, or choose
 a random column for each row to have a queen
 */
-function placeQueens(boardObj, queenObj, stateString = null) {
+function placeQueens(boardObj, queensArray, stateString = null) {
     if (stateString !== null) {
         let placements = parseStateString(stateString);
         placements.forEach(function(position) {
-            // jsboard mandates that you put a clone of a piece in each position
-            boardObj.cell(position).place(queenObj.clone())
+            let idx = placements.indexOf(position);
+            boardObj.cell(position).place(queensArray[idx]);
             }
         )
     }
     else {
-        let dim = boardObj.rows()
-        for (i = 0; i < dim; i ++) {
-            j = Math.floor(Math.random() * dim)
-            boardObj.cell([i, j]).place(queenObj.clone())
+        for (i = 0; i < queensArray.length; i ++) {
+            j = Math.floor(Math.random() * queensArray.length)
+            boardObj.cell([i, j]).place(queensArray[i])
         }
     }
 };
@@ -143,7 +142,7 @@ queen is found, or null if no queen is in that row
 */
 function locateQueenInRow(rowArray, startIndex = 0) {
     let colInd = rowArray.slice(startIndex).indexOf("1");
-    return colInd == -1 ? null : colInd;
+    return colInd;
 }
 
 /*
@@ -159,13 +158,11 @@ function getQueenLocations(boardObj) {
     for (i = 0; i < boardObj.rows(); i ++) {
         row = boardObj.matrix()[i]
         j = locateQueenInRow(row);
-        if (j === null) { continue }
+        if (j == -1) { continue }
         else {
-            while (j !== null) {
-                qLocs[qIdx] = [i, j]
-                qIdx += 1
-                j = locateQueenInRow(row, startIndex = j + 1)
-            }
+            qLocs[qIdx] = [i, j]
+            qIdx += 1
+            j = locateQueenInRow(row, startIndex = j + 1)
         }
     }
     return qLocs;
@@ -193,7 +190,7 @@ function getStateString(boardObj, move_queen = null, move_col = null) {
 }
 
 
-// An archetypal board that will render in the browser
+// A board that will render in the browser
 let b = jsboard.board({ attach:"game", size:"8x8", style:"checkerboard" });
 b.cell("each").style({ width:"60px", height:"60px" });
 
@@ -202,15 +199,81 @@ let queen = jsboard.piece({ text:"1", textIndent:"-9999px",
     background:"url(src/jsboard/images/chess/queen.png", 
     width:"50px", height:"50px"});
 
-// let stateString = null;
-// using a fixed state as a test case for moving pieces
+// An array with ample "clones" of all the generic pieces in play
+let piecesInPlay = [];
+for (i = 0; i < b.rows(); i++) {
+    piecesInPlay.push(queen.clone())
+}
+
+/* 
+using a fixed state as a test case for moving pieces, and putting each
+of the pieces in `piecesInPlay` at the appropriate places on the board
+*/
 let stateString = "1525384358627583"
+// let stateString = null;
+placeQueens(b, piecesInPlay, stateString);
 
-placeQueens(b, queen, stateString);
+// Stupid debugging bullcrap
 let foo = getQueenLocations(b);
-
-
-
 console.log(foo);
 console.log(getStateString(b));
+
+
+/* 
+Everything below here follows the chessboard example from jsboard.
+*/
+
+
+// variables for the piece to move and its locations
+let bindMovePiece, bindMoveLocs;
+
+
+//give functionality to pieces
+for (var i=0; i<piecesInPlay.length; i++) {
+    piecesInPlay[i].addEventListener("click", function() { showMoves(this); });
+    }
+
+//show new locations
+function showMoves(piece) {
+
+    resetBoard();
+    let pieceLoc = b.cell(piece.parentNode).where();
+    let newLocs = getMoves(pieceLoc, Object.values(getQueenLocations(b)));
+    bindMoveLocs = newLocs;
+    bindMovePiece = piece;
+    bindMoveEvents(bindMoveLocs);
+}
+
+// bind move event to new piece locations
+function bindMoveEvents(locs) {
+
+    locs.forEach(function(loc) { 
+        b.cell(loc).DOM().classList.add("green");
+        b.cell(loc).on("click", movePiece);
+        }
+    );
+}
+
+// actually move the piece
+function movePiece() {
+    let userClick = b.cell(this).where();
+    if (bindMoveLocs.indexOf(userClick)) {
+        b.cell(userClick).place(bindMovePiece);
+        resetBoard();
+    }
+}
+
+// blow away all event listeners that start when something is clicked
+function resetBoard() {
+    for (i = 0; i < b.rows(); i ++) {
+        for (j = 0; j < b.cols(); j++) {
+            b.cell([i,j]).DOM().classList.remove("green");
+            b.cell([i,j]).removeOn("click", movePiece);
+        }
+    }
+}
+
+
+
+
 
