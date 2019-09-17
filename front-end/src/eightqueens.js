@@ -1,6 +1,13 @@
 /*
 MORE OR LESS A PORT OF THE FUNCTIONALITY FROM back-end/chess_board.py from
 python into vanilla javascript. 
+
+In an ideal world, anything with a let statement would exist within this
+script and would have it be sort of an app.js thing. All other functionality
+(placement related, movement related, idk) would exist in separate files
+and be imported. Except I am bad at imports
+
+
 */
 
 const directions = {
@@ -150,7 +157,8 @@ Calls locateQueenInRow() for every row in the boardObject,
 returning an object with queen_index: [row_index, col_index]
 
 TODO: This breaks when a queen is in more than one row
-example string = "1112131415161718" 
+example string = "1112131415161718". At least now it isn't 
+in an infinite loop, but we are still messing stuff up 
 */
 function getQueenLocations(boardObj) {
     let qLocs = {};
@@ -196,7 +204,7 @@ b.cell("each").style({ width:"60px", height:"60px" });
 
 // A generic queen that will get placed in each square.  
 let queen = jsboard.piece({ text:"1", textIndent:"-9999px", 
-    background:"url(src/jsboard/images/chess/queen.png", 
+    background:"url(src/jsboard/images/chess/queen.png)", 
     width:"50px", height:"50px"});
 
 // An array with ample "clones" of all the generic pieces in play
@@ -212,12 +220,16 @@ of the pieces in `piecesInPlay` at the appropriate places on the board
 let stateString = "1525384358627583"
 // let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
+let queenLocs = getQueenLocations(b);
 
-// Stupid debugging bullcrap
-let foo = getQueenLocations(b);
-console.log(foo);
-console.log(getStateString(b));
+// Debugging bullcrap
+function debugLog() {
+    console.log(`We're at state ${getStateString(b)}`)
+    console.log(`Tracking ${Object.values(queenLocs).length} queens`)
+    console.log(`The queens are here: ${JSON.stringify(queenLocs, space = 2)}`)
+}
 
+debugLog()
 
 /* 
 Everything below here follows the chessboard example from jsboard.
@@ -228,7 +240,7 @@ Everything below here follows the chessboard example from jsboard.
 let bindMovePiece, bindMoveLocs;
 
 
-//give functionality to pieces
+//give functionality to pieces TODO: CHANGE TO A MAP STATEMENT?
 for (var i=0; i<piecesInPlay.length; i++) {
     piecesInPlay[i].addEventListener("click", function() { showMoves(this); });
     }
@@ -238,7 +250,7 @@ function showMoves(piece) {
 
     resetBoard();
     let pieceLoc = b.cell(piece.parentNode).where();
-    let newLocs = getMoves(pieceLoc, Object.values(getQueenLocations(b)));
+    let newLocs = getMoves(pieceLoc, Object.values(queenLocs));
     bindMoveLocs = newLocs;
     bindMovePiece = piece;
     bindMoveEvents(bindMoveLocs);
@@ -248,29 +260,47 @@ function showMoves(piece) {
 function bindMoveEvents(locs) {
 
     locs.forEach(function(loc) { 
-        b.cell(loc).DOM().classList.add("green");
+        // Does this actualy change the color now?
+        b.cell(loc).style({ "background":"lightgreen" });
         b.cell(loc).on("click", movePiece);
         }
     );
 }
 
-// actually move the piece
+// actually move the piece and update the queen locations
 function movePiece() {
     let userClick = b.cell(this).where();
     if (bindMoveLocs.indexOf(userClick)) {
         b.cell(userClick).place(bindMovePiece);
+        queenLocs = getQueenLocations(b);
+        //debug locs
+        debugLog();
         resetBoard();
     }
 }
 
-// blow away all event listeners that start when something is clicked
-function resetBoard() {
-    for (i = 0; i < b.rows(); i ++) {
-        for (j = 0; j < b.cols(); j++) {
-            b.cell([i,j]).DOM().classList.remove("green");
-            b.cell([i,j]).removeOn("click", movePiece);
-        }
+
+function revertColor(loc) {
+    if ((loc[0] % 2) == (loc[1] % 2)) {
+        return { "background": "lightgray"};
     }
+    return { "background":"gray" };
+}
+
+/* 
+blow away all event listeners that start when something is clicked
+and recolor the board. Do nothing if this is the first move you've
+ever made
+*/
+function resetBoard() {
+    if (bindMoveLocs === undefined) {
+        return
+    }
+    bindMoveLocs.forEach(function(loc) {
+        b.cell(loc).removeOn("click", movePiece);
+        b.cell(loc).style(revertColor(loc))
+        }
+    );
 }
 
 
