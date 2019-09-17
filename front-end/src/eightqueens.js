@@ -227,6 +227,7 @@ let stateString = "1525384358627583"
 placeQueens(b, piecesInPlay, stateString);
 let queenLocs = getQueenLocations(b);
 
+
 // Debugging bullcrap
 function debugLog() {
     console.log(`We're at state ${getStateString(b)}`)
@@ -236,15 +237,22 @@ function debugLog() {
 
 debugLog()
 
+
 /* 
-Everything below here follows the chessboard example from jsboard.
+Variables for the piece to move and its locations. Both are undefined 
+initially but they get updated as people interact with the board 
 */
-
-
-// variables for the piece to move and its locations. Both are undefined
 let bindMovePiece, bindMoveLocs;
 
 
+/*
+An array of stateStrings that the user has navigated to. We can derive
+moves made by getting length of this - 1
+
+TODO: problem for another day, but I'm uncertain whether this will support
+undo/redo functionality
+*/
+let stateCache = [getStateString(b)]
 
 
 
@@ -269,13 +277,22 @@ function bindMoveEvents(locs) {
     );
 }
 
-// actually move the piece and update the queen locations
+/* 
+If the user makes a valid move: ...
+
+- actually move the piece 
+- update the queen locations object
+- pop the state onto the cache
+- update the moveCounter div
+- wipe all eventListeners and visual
+*/
 function movePiece() {
     let userClick = b.cell(this).where();
     if (bindMoveLocs.indexOf(userClick)) {
         b.cell(userClick).place(bindMovePiece);
         queenLocs = getQueenLocations(b);
-        //debug locs
+        stateCache.push(getStateString(b));
+        incrementMoveCount()
         debugLog();
         resetBoard();
     }
@@ -306,6 +323,9 @@ function resetBoard() {
 }
 
 
-
+function incrementMoveCount() {
+    let div = document.getElementById("moveCounter");
+    div.innerHTML = `<p><b> Moves Made: ${stateCache.length - 1}<b><p>`;
+};
 
 
