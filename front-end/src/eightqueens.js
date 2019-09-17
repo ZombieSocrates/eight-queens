@@ -5,9 +5,7 @@ python into vanilla javascript.
 In an ideal world, anything with a let statement would exist within this
 script and would have it be sort of an app.js thing. All other functionality
 (placement related, movement related, idk) would exist in separate files
-and be imported. Except I am bad at imports
-
-
+and be imported. Except I am bad at imports.
 */
 
 const directions = {
@@ -66,7 +64,6 @@ function checkOutOfBounds(coord, boardSize, direction) {
     }
 }
 
-
 /*
 Fun fact: The Javascript equality operator will only return true if they
 reference the same object. This means that [1,3] != [1,3], and this function 
@@ -95,7 +92,10 @@ function movesInDirection(coord, queenLocsArray, direction, moves = []) {
     }
 }
 
-
+/*
+TODO: Would be excellent to put everything that getMoves() depends on into
+a separate import ... potentially along with showMoves()
+*/
 function getMoves(coord, queenLocsArray) {
     let possibleMoves = []
     Object.values(directions).forEach(function(dir) {
@@ -148,29 +148,30 @@ Returns a column for a row in the jsboard matrix where a
 queen is found, or null if no queen is in that row
 */
 function locateQueenInRow(rowArray, startIndex = 0) {
-    let colInd = rowArray.slice(startIndex).indexOf("1");
-    return colInd;
+    let findIndex = rowArray.slice(startIndex).indexOf("1");
+    if (findIndex == -1) {
+        return null
+    }
+    return findIndex + startIndex;
 }
 
 /*
 Calls locateQueenInRow() for every row in the boardObject, 
 returning an object with queen_index: [row_index, col_index]
-
-TODO: This breaks when a queen is in more than one row
-example string = "1112131415161718". At least now it isn't 
-in an infinite loop, but we are still messing stuff up 
 */
 function getQueenLocations(boardObj) {
     let qLocs = {};
     let qIdx = 0;
     for (i = 0; i < boardObj.rows(); i ++) {
-        row = boardObj.matrix()[i]
+        row = boardObj.matrix()[i];
         j = locateQueenInRow(row);
-        if (j == -1) { continue }
-        else {
-            qLocs[qIdx] = [i, j]
-            qIdx += 1
-            j = locateQueenInRow(row, startIndex = j + 1)
+        if (j === null) {
+            continue
+        }
+        while (j !== null) {
+            qLocs[qIdx] = [i,j];
+            qIdx += 1;
+            j = locateQueenInRow(row, startIndex = j + 1);
         }
     }
     return qLocs;
@@ -197,7 +198,6 @@ function getStateString(boardObj, move_queen = null, move_col = null) {
     return stateStr
 }
 
-
 // A board that will render in the browser
 let b = jsboard.board({ attach:"game", size:"8x8", style:"checkerboard" });
 b.cell("each").style({ width:"60px", height:"60px" });
@@ -207,10 +207,15 @@ let queen = jsboard.piece({ text:"1", textIndent:"-9999px",
     background:"url(src/jsboard/images/chess/queen.png)", 
     width:"50px", height:"50px"});
 
-// An array with ample "clones" of all the generic pieces in play
+/* 
+An array with ample "clones" of all the generic pieces in play, 
+each of which has an event listener added onto it
+*/
 let piecesInPlay = [];
 for (i = 0; i < b.rows(); i++) {
-    piecesInPlay.push(queen.clone())
+    piecesInPlay.push(queen.clone());
+    piecesInPlay[i].addEventListener("click", 
+        function() { showMoves(this) });
 }
 
 /* 
@@ -226,7 +231,7 @@ let queenLocs = getQueenLocations(b);
 function debugLog() {
     console.log(`We're at state ${getStateString(b)}`)
     console.log(`Tracking ${Object.values(queenLocs).length} queens`)
-    console.log(`The queens are here: ${JSON.stringify(queenLocs, space = 2)}`)
+    console.log(`The queens are here: ${JSON.stringify(queenLocs)}`)
 }
 
 debugLog()
@@ -236,14 +241,12 @@ Everything below here follows the chessboard example from jsboard.
 */
 
 
-// variables for the piece to move and its locations
+// variables for the piece to move and its locations. Both are undefined
 let bindMovePiece, bindMoveLocs;
 
 
-//give functionality to pieces TODO: CHANGE TO A MAP STATEMENT?
-for (var i=0; i<piecesInPlay.length; i++) {
-    piecesInPlay[i].addEventListener("click", function() { showMoves(this); });
-    }
+
+
 
 //show new locations
 function showMoves(piece) {
@@ -260,7 +263,6 @@ function showMoves(piece) {
 function bindMoveEvents(locs) {
 
     locs.forEach(function(loc) { 
-        // Does this actualy change the color now?
         b.cell(loc).style({ "background":"lightgreen" });
         b.cell(loc).on("click", movePiece);
         }
