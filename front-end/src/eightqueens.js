@@ -75,14 +75,22 @@ function checkIfOccupied(coord, queenLocsArray) {
     return queenLocsStr.indexOf(coordStr) > -1 ? true : false
 }
 
+/*
+TODO:
+Right now this function relies on one global scope variable b.rows()...if I refactor
+this out that would be problematic
 
+Also, the way I'm using queenLocsArray, it's really more like barrierLocs, so I should
+rename that
+*/
 function movesInDirection(coord, queenLocsArray, direction, moves = []) {
     let blocked = false;
     while (!blocked) {
         let newCoord = getNextCoordinate(coord, direction)
         let hitPiece = checkIfOccupied(newCoord, queenLocsArray)
-        let outOfBounds = checkOutOfBounds(newCoord, queenLocsArray.length, 
-            direction)
+        let outOfBounds = checkOutOfBounds(coord = newCoord, 
+            boardSize = b.rows(), 
+            direction = direction)
         if (!hitPiece && !outOfBounds) {
             moves.push(newCoord)
             movesInDirection(newCoord, queenLocsArray, direction, moves)
@@ -97,7 +105,7 @@ TODO: Would be excellent to put everything that getMoves() depends on into
 a separate import ... potentially along with showMoves()
 */
 function getMoves(coord, queenLocsArray) {
-    let possibleMoves = []
+    let possibleMoves = [];
     Object.values(directions).forEach(function(dir) {
         let dirMoves = movesInDirection(coord, queenLocsArray, dir)
         possibleMoves.push(...dirMoves)
@@ -226,15 +234,34 @@ let stateString = "1525384358627583"
 // let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
 let queenLocs = getQueenLocations(b);
+let queenConflicts = getConflictCountsByQueen(queenLocs);
 
 
 // Debugging bullcrap
 function debugLog() {
-    console.log(`We're at state ${getStateString(b)}`)
-    console.log(`Tracking ${Object.values(queenLocs).length} queens`)
-    console.log(`The queens are here: ${JSON.stringify(queenLocs)}`)
+    console.log(`We're at state ${getStateString(b)}`);
+    console.log(`Tracking ${Object.values(queenLocs).length} queens`);
+    console.log(`The queens are here: ${JSON.stringify(queenLocs)}`);
+    console.log(`Total conflicts: ${Object.values(queenConflicts)
+        .reduce((a, b) => a + b, 0)}`);
+    console.log(`Conflicts by queen ${JSON.stringify(queenConflicts)}`);
 }
 
+
+
+
+/*
+An array of stateStrings that the user has navigated to. We can derive
+moves made by getting length of this - 1
+
+TODO: problem for another day, but I'm uncertain whether this will support
+undo/redo functionality
+*/
+let stateCache = [getStateString(b)];
+
+
+displayMoveCount();
+displayConflictScore();
 debugLog()
 
 
@@ -245,14 +272,6 @@ initially but they get updated as people interact with the board
 let bindMovePiece, bindMoveLocs;
 
 
-/*
-An array of stateStrings that the user has navigated to. We can derive
-moves made by getting length of this - 1
-
-TODO: problem for another day, but I'm uncertain whether this will support
-undo/redo functionality
-*/
-let stateCache = [getStateString(b)]
 
 
 
@@ -283,8 +302,14 @@ If the user makes a valid move: ...
 - actually move the piece 
 - update the queen locations object
 - pop the state onto the cache
-- update the moveCounter div
+- display the count of moves in the appropriate div
+- recalculate the conflicts object
+- display the conflict score in the appropriate div
 - wipe all eventListeners and visual
+
+
+This is starting to reveal to me all of the complexity
+baked into "Many things need to happen whenever state is managed"
 */
 function movePiece() {
     let userClick = b.cell(this).where();
@@ -292,7 +317,9 @@ function movePiece() {
         b.cell(userClick).place(bindMovePiece);
         queenLocs = getQueenLocations(b);
         stateCache.push(getStateString(b));
-        incrementMoveCount()
+        displayMoveCount();
+        queenConflicts = getConflictCountsByQueen(queenLocs);
+        displayConflictScore();
         debugLog();
         resetBoard();
     }
@@ -322,10 +349,127 @@ function resetBoard() {
     );
 }
 
-
-function incrementMoveCount() {
-    let div = document.getElementById("moveCounter");
-    div.innerHTML = `<p><b> Moves Made: ${stateCache.length - 1}<b><p>`;
+/* 
+This function is called everytime a move is made and just
+overwrites all the stuff in the moveCounter div
+*/
+function displayMoveCount() {
+    let div = document.getElementById("moveCount");
+    div.innerHTML = `<p><b> Moves Made:</b> ${stateCache.length - 1}</p>`;
 };
 
+
+function displayConflictScore() {
+    let div = document.getElementById("conflictScore");
+    let score = Object.values(queenConflicts).reduce((a,b) => a + b, 0);
+    div.innerHTML = `<p><b> Current Conflict Score:</b> ${score}</p>`
+};
+
+
+// CONFLICT COUNTING LOGIC THAT SHOULD EVENTUALLY BE IMPORTED IF I EVER FIGURE OUT HOW THAT WORKS
+function countOrthogonalConflicts(qLocs) {
+    let orthConflicts = {};
+    for (let k in qLocs) {
+        orthConflicts[k] = 0;
+        for (let d in [0,1]) {
+            let currDim = qLocs[k][d];
+            let matchDims = Object.values(qLocs).filter(m => m[d] == currDim);
+            orthConflicts[k] += (matchDims.length - 1);
+        }
+    }
+    return orthConflicts
+};
+
+/*
+This is basically just calling getMoves EXCEPT
+ - we're only doing it for certain directions 
+ - we're ignoring the condition where we hit a queen by passing an empty queen locs array
+
+ TODO: Could I just refactor getMoves to take in a list of directions?
+ Then I could either pass in Object.values(directions) or something like 
+ Object.values(directions) .filter(d => d.indexOf("_") > -1)
+*/
+function getDiagonals(loc) {
+    let diagSpaces = [];
+    Object.values(directions).forEach(function(dir) {
+        if (dir.indexOf("_") > -1) {
+            let dirMoves = movesInDirection(coord = loc, 
+                queenLocsArray = [], 
+                direction = dir);
+            diagSpaces.push(...dirMoves);
+        }
+    })
+    return diagSpaces
+};
+
+
+function locInequality(locA, locB) {
+    return (locA[0] != locB[0]) || (locA[1] != locB[1]);
+}
+
+
+function setIntersection(setA, setB) {
+    let intrsct = new Set()
+    for (let elem of setB) {
+        if (setA.has(elem)) {
+            intrsct.add(elem);
+        }
+    }
+    return intrsct
+};
+
+/*
+Doing a set intersection on an array of arrays was RIDICULOUS AND
+TERRIBLE
+*/
+function countDiagonalConflicts(qLocs) {
+    let diagConflicts = {};
+    const locToString = x => `${x[0]}${x[1]}`
+    for (let k in qLocs) {
+        let thisLoc = qLocs[k];
+        let diagsFromThis = getDiagonals(thisLoc)
+            .map(locToString);
+        let otherLocs = Object.values(qLocs)
+            .filter(x => locInequality(x, thisLoc))
+            .map(locToString);
+       conflictSet = setIntersection(setA = new Set(diagsFromThis), 
+           setB = new Set(otherLocs));
+       diagConflicts[k] = conflictSet.size
+    }
+    return diagConflicts
+};
+
+
+function combineConflictCounts(conflictCountsArray) {
+    let combined;
+    for (let c of conflictCountsArray) {
+        if (combined === undefined) {
+            combined = Object.assign({},c);
+            continue
+        }
+        for (let k of Object.keys(c)) {
+            combined[k] += c[k];
+        }
+    }
+    return combined
+};
+
+
+/*
+Should all this conflict by queen stuff ever get ported to a separate file,
+this is the primary export default type function that will actually get 
+invoked in the front end.
+
+The last two array operations are just filtering down the conflict object
+to boot out keys where the value is 0
+*/
+function getConflictCountsByQueen(qLocs) {
+    conflictCounts = [countOrthogonalConflicts(qLocs), 
+        countDiagonalConflicts(qLocs)];
+    mergedCounts = combineConflictCounts(conflictCounts);
+    Object.keys(mergedCounts)
+        .filter(k => mergedCounts[k] == 0)
+        .forEach(k => delete mergedCounts[k])
+    return mergedCounts
+};
 
