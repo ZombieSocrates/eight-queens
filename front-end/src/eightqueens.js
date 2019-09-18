@@ -355,15 +355,49 @@ overwrites all the stuff in the moveCounter div
 */
 function displayMoveCount() {
     let div = document.getElementById("moveCount");
-    div.innerHTML = `<p><b> Moves Made:</b> ${stateCache.length - 1}</p>`;
+    div.innerHTML = `<text><b>Count of Moves: </b> ${stateCache.length - 1}</text>`;
 };
 
 
 function displayConflictScore() {
     let div = document.getElementById("conflictScore");
     let score = Object.values(queenConflicts).reduce((a,b) => a + b, 0);
-    div.innerHTML = `<p><b> Current Conflict Score:</b> ${score}</p>`
+    let itemizedScores = [];
+    Object.keys(queenConflicts)
+        .sort((a, b) => queenConflicts[b] - queenConflicts[a])
+        .forEach(function(k) {
+            let qLabel = parseInt(k) + 1;
+            let qScore = queenConflicts[k];
+            itemizedScores.push(`<li>Queen ${qLabel} has ${qScore} conflicts</li>`)
+            }
+    )
+    div.innerHTML = `
+          <button onclick="showScoreByQueen()" class="dropdownBtn"><b>Current Conflicts: </b>${score}
+          </button>
+          <div id="scoreDropdown" class="dropdownItems">
+              <ul>
+              ${itemizedScores.join("")}
+              </ul>
+          </div>`
 };
+
+
+function showScoreByQueen() {
+    document.getElementById("scoreDropdown").classList.toggle("show")
+}
+
+// if somebody clicks outside the dropdown menu, and it's open, it will go away
+window.onclick = function(event) {
+    if (!(event.target.matches(".dropdownBtn"))) {
+        let dropdowns = document.getElementsByClassName("dropdownItems");
+        for (let item of dropdowns) {
+            if (item.classList.contains("show")){
+                item.classList.remove("show")
+            }
+        }
+    }
+}
+
 
 
 // CONFLICT COUNTING LOGIC THAT SHOULD EVENTUALLY BE IMPORTED IF I EVER FIGURE OUT HOW THAT WORKS
@@ -379,6 +413,9 @@ function countOrthogonalConflicts(qLocs) {
     }
     return orthConflicts
 };
+
+
+
 
 /*
 This is basically just calling getMoves EXCEPT
