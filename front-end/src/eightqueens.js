@@ -78,7 +78,7 @@ function checkIfOccupied(coord, queenLocsArray) {
 /*
 TODO:
 Right now this function relies on one global scope variable b.rows()...if I refactor
-this out that would be problematic
+this into a separate file that would be problematic
 
 Also, the way I'm using queenLocsArray, it's really more like barrierLocs, so I should
 rename that
@@ -248,8 +248,6 @@ function debugLog() {
 }
 
 
-
-
 /*
 An array of stateStrings that the user has navigated to. We can derive
 moves made by getting length of this - 1
@@ -291,15 +289,14 @@ function bindMoveEvents(locs) {
 
     locs.forEach(function(loc) { 
         b.cell(loc).style({ "background":"lightgreen" });
-        b.cell(loc).on("click", movePiece);
+        b.cell(loc).on("click", movePieceByUser);
         }
     );
 }
 
 /* 
-If the user makes a valid move: ...
-
-- actually move the piece 
+Everything that needs to happen whenever the user (or the solver)
+has actually moved a piece...
 - update the queen locations object
 - pop the state onto the cache
 - display the count of moves in the appropriate div
@@ -311,17 +308,23 @@ If the user makes a valid move: ...
 This is starting to reveal to me all of the complexity
 baked into "Many things need to happen whenever state is managed"
 */
-function movePiece() {
+function updateStateFromMove() {
+    queenLocs = getQueenLocations(b);
+    stateCache.push(getStateString(b));
+    displayMoveCount();
+    queenConflicts = getConflictCountsByQueen(queenLocs);
+    displayConflictScore();
+    debugLog(); //should remove this eventually
+    resetBoard();
+}
+
+
+
+function movePieceByUser() {
     let userClick = b.cell(this).where();
     if (bindMoveLocs.indexOf(userClick)) {
         b.cell(userClick).place(bindMovePiece);
-        queenLocs = getQueenLocations(b);
-        stateCache.push(getStateString(b));
-        displayMoveCount();
-        queenConflicts = getConflictCountsByQueen(queenLocs);
-        displayConflictScore();
-        debugLog();
-        resetBoard();
+        updateStateFromMove()  
     }
 }
 
@@ -343,7 +346,7 @@ function resetBoard() {
         return
     }
     bindMoveLocs.forEach(function(loc) {
-        b.cell(loc).removeOn("click", movePiece);
+        b.cell(loc).removeOn("click", movePieceByUser);
         b.cell(loc).style(revertColor(loc))
         }
     );
@@ -509,4 +512,25 @@ function getConflictCountsByQueen(qLocs) {
         .forEach(k => delete mergedCounts[k])
     return mergedCounts
 };
+
+
+/*
+Automatic moves ... this works but woof
+*/
+function movePieceAuto(fromLoc, toLoc) {
+    let piecesInPlay = document.querySelectorAll("div[class*=pieceID]");
+    for (pc of Array.from(piecesInPlay)) {
+        if (!locInequality(b.cell(pc.parentNode).where(), fromLoc)) {
+            console.log(`Found ${pc.parentNode}`);
+            bindMovePiece = pc
+            break
+        }
+    }
+    if (bindMovePiece !== undefined) {
+        b.cell(toLoc).place(bindMovePiece);
+        updateStateFromMove()
+    }
+}
+
+
 
