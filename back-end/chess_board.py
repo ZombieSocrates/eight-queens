@@ -5,24 +5,35 @@ from collections import Counter
 
 class chessBoard(object):
 
-    def __init__(self, dimension, queen_seed = None):
-        '''Sets up a chess board of a specified dimension and randomly 
-        places a single queen in each row. Seeding this placement is 
-        supported. 
+    def __init__(self, dimension, state_string = None, queen_seed = None):
+        '''Sets up a chess board of a specified dimension and puts queens at
+        given positions or at entirely random positions. 
 
-        TODO: If solvers have chessboards passed to them from the front end, 
-        we may need more ways to create a valid board'''
+        In the context of the app, this class will be initialized with strings 
+        representing the position of each queen on the board. We check to make 
+        sure that the positions aren't junky. 
+
+        You can also leave state_string as None and supply a seed to put a 
+        queen randomly in each row.
+
+        TODO: state_string will be more complicated if dimension is of 
+        order of magnitude 2'''
         self.dim = dimension
-        self.q_seed = queen_seed
-        self.rows = self.place_queens_by_row()
+        if state_string is None:
+            self.rows = self.random_queen_each_row(queen_seed)
+        elif not self.validate_state_string(state_string):
+            raise NotImplementedError("I'm afraid I can't let you do that...")
+        else:
+            self.rows = self.place_queens_from_state_string(state_string)
         self.q_locs = self.get_queen_locations()
+        self.board_state = self.get_state_string()
 
 
-    def place_queens_by_row(self):
+    def random_queen_each_row(self, queen_seed):
         '''Places a single queen (1) in each row of the chessboard according 
         to the `dim` and `q_seed` attributes. '''
         rows = []
-        random.seed(self.q_seed)
+        random.seed(queen_seed)
         for i in range(self.dim):
             row = [0 for c in range(self.dim)]
             q_loc = random.randint(a = 0, b = self.dim - 1)
@@ -75,6 +86,42 @@ class chessBoard(object):
             print(f"Queen {q + 1} is at row {r + 1}, column {c + 1}")
 
 
+    def validate_state_string(self, state_string):
+        '''This gets more complicated if dim order of magnitude is > 2. In fact,
+        a pure string almost certainly won't work unless you zero-pad every
+        coordinate to be the order of magnitude of the dimension of the board.
+
+        THAT'S A PROBLEM FOR ANOTHER DAYY
+        '''
+        right_len = len(state_string)//2 == self.dim
+        in_bounds = self.check_state_string_bounds(state_string)
+        no_dupes = self.check_duplicate_positions(state_string)
+        return (right_len & in_bounds & no_dupes)
+
+        
+    def check_state_string_bounds(self, state_string):
+        '''Do all of the coordinates in the state string fall within the 
+        dimensions of the board?
+        '''
+        try:
+            min_cond = int(min(state_string)) == 1
+            max_cond = int(max(state_string)) == self.dim
+        except ValueError as e:
+            return False
+        return (max_cond & min_cond)
+
+
+    def check_duplicate_positions(self, state_string):
+        '''Does a state string that you are passing in to the creation
+        function contain duplicate positions?
+
+        Also, see above note about this assuming each coordinate being a 
+        one digit string for the time being
+        '''
+        positions = [state_string[2*i:(2*i + 2)] for i in range(self.dim)]
+        return max(Counter(positions).values()) == 1
+
+
     def get_state_string(self, move_queen = None, to_col = None):
         '''Returns a representation of the chess board's queen positions as a 
         (dim*2)-digit string. Every two characters is the row, column location 
@@ -90,7 +137,17 @@ class chessBoard(object):
                 loc_strs.append(f"{v[0] + 1}{to_col + 1}")
             else:
                 loc_strs.append(f"{v[0] + 1}{v[1] + 1}")
-        return "".join(loc_strs)   
+        return "".join(loc_strs)
+
+
+    def place_queens_from_state_string(self, state_string):
+        rows = [[0] * self.dim for i in range(self.dim)]
+        for i in range(self.dim):
+            r_ind = int(state_string[(2*i)]) - 1
+            c_ind = int(state_string[2*i + 1]) - 1
+            rows[r_ind][c_ind] = 1
+        return rows
+            
 
    
     def check_up_and_left(self, coord):
@@ -207,4 +264,24 @@ class chessBoard(object):
 
 if __name__ == "__main__":
 
-    pass
+    print("Init from random number")
+    foo = chessBoard(dimension = 8, queen_seed = 42)
+    foo.display()
+    print("\n-----------")
+
+    print("Init from determined positions")
+    bar = chessBoard(dimension = 8, state_string = "1525384358627583")
+    bar.display()
+    print("\n-----------")
+
+
+    print("Failing with an invalid initialization string")
+    for junky_str in ["","555"]:
+        try:
+            chessBoard(dimension = 8, state_string = junky_str)
+        except NotImplementedError as e:
+            print(f"\t{e}")
+
+
+
+
