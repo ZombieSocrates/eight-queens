@@ -2,6 +2,8 @@ import random
 import ipdb
 
 from collections import Counter
+from chess_board import chessBoard
+from pprint import pprint
 
 
 class baseSolver(object):
@@ -179,6 +181,8 @@ class columnwiseCSPSolver(baseSolver):
         self.board.rows[queen_start_pos[0]][queen_start_pos[1]] = 0
         self.board.rows[queen_start_pos[0]][dest_column] = 1
         self.board.q_locs[focus_queen] = (queen_start_pos[0], dest_column)
+        # This is more of a housekeeping step rather than actually crucial
+        self.board.board_state = self.board.get_state_string()
     
 
     def update_seen_states(self, focus_queen, dest_column):
@@ -253,5 +257,12 @@ class columnwiseCSPSolver(baseSolver):
 
 
 if __name__ == "__main__":
+    
+    cb = chessBoard(dimension = 8, state_string = "1525384358627583")
+    sv = columnwiseCSPSolver(board_object = cb, max_moves = 50)
+    soln_path = sv.solve()
+    sv.solution_shortdoc()
+    #TODO: Actually return the solution in a way the frontend can handle
+    pprint(soln_path)
 
-    pass
+
