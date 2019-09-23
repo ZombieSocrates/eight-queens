@@ -1,7 +1,7 @@
 import random
-import ipdb
+import pdb
 
-from collections import Counter
+from collections import Counter, defaultdict
 from chess_board import chessBoard
 from pprint import pprint
 
@@ -55,31 +55,63 @@ class baseSolver(object):
         '''
         if self.is_solved:
             n = len(self.seen_states) - 1
-            print(f"Solved the {self.board.dim}-queens problem in {n} steps!")
+            return f"Solved the {self.board.dim}-queens problem in {n} steps!"
         else:
-            print(f"Took {self.move_limit} steps and found no solution...")
+            return f"Took {self.move_limit} steps and found no solution..."
 
 
     def retrieve_solution_steps(self):
-        steps_taken = []
+        '''TODO: The solve method should only call this particular method if 
+        we terminate with is_solved True
+        '''
+        solution_json = {
+            "is_solved": self.is_solved,
+            "shortdoc": self.solution_shortdoc(),
+            "data":defaultdict(list)
+        }
         pointB = self.board.get_state_string()
         while pointB is not None:
             pointA = self.seen_states[pointB]
             if pointA is not None:
-                steps_taken.append(self.describe_step(parent_state = pointA, 
-                    child_state = pointB))
+                txt_step = self.solution_step_as_text(parent_state = pointA, 
+                    child_state = pointB)
+                solution_json["data"]["text"].insert(0, txt_step)
+                crd_pair = self.solution_step_as_coords(parent_state = pointA, 
+                    child_state = pointB)
+                solution_json["data"]["coords"].insert(0, crd_pair)
             pointB = pointA    
-        return steps_taken[::-1]
+        return solution_json
+
+
+    def get_change_between_states(self, parent_state, child_state):
+        '''TODO (?): Won't always be slicing by two for larger orders of 
+        magnitude of self.board.dim'''
+        for v in range(self.board.dim):
+            parent_pos = parent_state[(2 * v):2 * (v + 1)]
+            child_pos = child_state[(2 * v):2 * (v + 1)]
+            if parent_pos != child_pos:
+                return parent_pos, child_pos
+
+
+    def solution_step_as_coords(self, parent_state, child_state):
+        step_coords = []
+        for pos in self.get_change_between_states(parent_state, child_state):
+            coord_pair = [int(v) - 1 for v in pos]
+            step_coords.append(coord_pair)
+        return step_coords
+
+
+    def solution_step_as_text(self, parent_state, child_state):
+        p_pos, c_pos = self.get_change_between_states(parent_state, child_state)
+        s1 = f"Move queen at ({p_pos[0]},{p_pos[1]})"
+        s2 = f"to ({c_pos[0]},{c_pos[1]})"
+        return " ".join([s1, s2]) 
+
 
 
     def describe_step(self, parent_state, child_state):
-        for v in range(self.board.dim):
-            p_pos = parent_state[(2 * v):2 * (v + 1)]
-            c_pos = child_state[(2 * v):2 * (v + 1)]
-            if p_pos != c_pos:
-                s1 = f"Move queen at ({p_pos[0]},{p_pos[1]})"
-                s2 = f"to ({c_pos[0]},{c_pos[1]})"
-                return " ".join([s1, s2])
+        '''deprecated'''
+        pass
 
 
     def solve(self):
@@ -235,7 +267,7 @@ class columnwiseCSPSolver(baseSolver):
                     print(f"Pausing after {self.n_moves} steps.")
                     if verbose:
                         self.board.display()
-                    ipdb.set_trace()
+                    pdb.set_trace()
         return self.retrieve_solution_steps()
 
 
@@ -260,9 +292,10 @@ if __name__ == "__main__":
     
     cb = chessBoard(dimension = 8, state_string = "1525384358627583")
     sv = columnwiseCSPSolver(board_object = cb, max_moves = 50)
-    soln_path = sv.solve()
-    sv.solution_shortdoc()
+    soln_json = sv.solve()
+    print(sv.solution_shortdoc())
     #TODO: Actually return the solution in a way the frontend can handle
-    pprint(soln_path)
+    # pdb.set_trace()
+    pprint(soln_json)
 
 
