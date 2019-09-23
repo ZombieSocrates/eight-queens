@@ -55,3 +55,18 @@ container when the user clicks on the dropdown button) */
   border: none;
   display: inline-block;
 }
+
+.autoSolveButtonContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.autoSolveBtn {
+  background-color: #ff77aa;
+  color: white;
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+}
+

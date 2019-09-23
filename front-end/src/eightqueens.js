@@ -515,7 +515,7 @@ function getConflictCountsByQueen(qLocs) {
 
 
 /*
-Automatic moves ... this works but woof
+THINGS RELATED TO USING THE SOLVE BUTTON
 */
 function movePieceAuto(fromLoc, toLoc) {
     let piecesInPlay = document.querySelectorAll("div[class*=pieceID]");
@@ -533,4 +533,22 @@ function movePieceAuto(fromLoc, toLoc) {
 }
 
 
-
+function solvePuzzle() {
+    let xmlhttp = new XMLHttpRequest();
+    let boardSize = b.rows();
+    let boardState = getStateString(b);
+    let url = `http://localhost:5000/solve?dimension=${boardSize}&state=${boardState}`
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+            let response = JSON.parse(this.responseText)
+            response["data"]["coords"].forEach( function(coord) {
+                movePieceAuto(fromLoc = coord[0], toLoc = coord[1])
+                setTimeout(console.log("derp"), timer = 10000)
+            })
+        }
+    }
+    xmlhttp.open("GET", url = url);
+    //this is almost certainly bad practice and doesn't even work to get around CORS
+    // xmlhttp.setRequestHeader("Access-Control-Allow-Origin","http://localhost:5000")
+    xmlhttp.send();
+}
