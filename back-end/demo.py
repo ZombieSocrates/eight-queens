@@ -5,7 +5,7 @@ from solvers import columnwiseCSPSolver
 
 
     # TODO: 
-    # - Focus on some minimal front end that reproduces most of the experience in this l337 CLI experience
+    # - KNOWN ISSUES: DEMO ROUTE 5 with a 25-queen board is broken. Probably because of state strings
     # - columnwiseCSPSolver could choose randomly if it can't do the best possible thing?
     # - Or, that random thing could be another solver entirely
 
@@ -70,7 +70,7 @@ def solve_many_boards(seed_list, dim_each = 8, n_moves = 50,
         game = chessBoard(dimension = dim_each, queen_seed = s)
         player = columnwiseCSPSolver(board_object = game, max_moves = n_moves)
         n_steps = player.solve(verbose = verbose, stop_each = stop_each)
-        player.solution_shortdoc()
+        print(player.solution_shortdoc())
         print("-" * bcount, "\n")
 
 

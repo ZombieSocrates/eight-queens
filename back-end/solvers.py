@@ -55,9 +55,9 @@ class baseSolver(object):
         '''
         if self.is_solved:
             n = len(self.seen_states) - 1
-            print(f"Solved the {self.board.dim}-queens problem in {n} steps!")
+            return f"Solved the {self.board.dim}-queens problem in {n} steps!"
         else:
-            print(f"Took {self.move_limit} steps and found no solution...")
+            return f"Took {self.move_limit} steps and found no solution..."
 
 
     def retrieve_solution_steps(self):
@@ -66,6 +66,7 @@ class baseSolver(object):
         '''
         solution_json = {
             "is_solved": self.is_solved,
+            "shortdoc": self.solution_shortdoc(),
             "data":defaultdict(list)
         }
         pointB = self.board.get_state_string()
@@ -266,7 +267,7 @@ class columnwiseCSPSolver(baseSolver):
                     print(f"Pausing after {self.n_moves} steps.")
                     if verbose:
                         self.board.display()
-                    ipdb.set_trace()
+                    pdb.set_trace()
         return self.retrieve_solution_steps()
 
 
@@ -292,7 +293,7 @@ if __name__ == "__main__":
     cb = chessBoard(dimension = 8, state_string = "1525384358627583")
     sv = columnwiseCSPSolver(board_object = cb, max_moves = 50)
     soln_json = sv.solve()
-    sv.solution_shortdoc()
+    print(sv.solution_shortdoc())
     #TODO: Actually return the solution in a way the frontend can handle
     # pdb.set_trace()
     pprint(soln_json)
