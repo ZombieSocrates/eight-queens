@@ -521,7 +521,6 @@ function movePieceAuto(fromLoc, toLoc) {
     let piecesInPlay = document.querySelectorAll("div[class*=pieceID]");
     for (pc of Array.from(piecesInPlay)) {
         if (!locInequality(b.cell(pc.parentNode).where(), fromLoc)) {
-            console.log(`Found ${pc.parentNode}`);
             bindMovePiece = pc
             break
         }
@@ -540,15 +539,38 @@ function solvePuzzle() {
     let url = `http://localhost:5000/solve?dimension=${boardSize}&state=${boardState}`
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-            let response = JSON.parse(this.responseText)
-            response["data"]["coords"].forEach( function(coord) {
-                movePieceAuto(fromLoc = coord[0], toLoc = coord[1])
-                setTimeout(console.log("derp"), timer = 10000)
-            })
+            let response = JSON.parse(this.responseText);
+            console.log(`Solution in ${response["data"]["coords"].length} steps`);
+            displaySteps(0, response["data"]["coords"]);
+            //uhhh ... definitely get rid of this
+            verboseStepLog(response)
         }
     }
     xmlhttp.open("GET", url = url);
-    //this is almost certainly bad practice and doesn't even work to get around CORS
+    //the line below is almost certainly bad practice and doesn't even work to get around CORS
     // xmlhttp.setRequestHeader("Access-Control-Allow-Origin","http://localhost:5000")
     xmlhttp.send();
+}
+
+/*
+Apparently, executing a function every X seconds is non-trivial
+Following this: https://scottiestech.info/2014/07/01/javascript-fun-looping-with-a-delay/
+
+TODO: One move per second is preeety sloooooooow
+*/
+function displaySteps(stepIndex, stepArray) {
+    setTimeout(function () {
+        // console.log(stepIndex);
+        // console.log(stepArray[stepIndex])
+        movePieceAuto(stepArray[stepIndex][0], stepArray[stepIndex][1]);
+        if (++stepIndex < stepArray.length){
+            displaySteps(stepIndex, stepArray);
+        }
+    },1000)
+}
+
+
+function verboseStepLog(httpResponse) {
+    console.log("Here's what we did")
+    httpResponse["data"]["text"].forEach( x => console.log(x));
 }
