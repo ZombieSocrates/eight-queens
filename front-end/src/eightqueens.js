@@ -515,7 +515,7 @@ function getConflictCountsByQueen(qLocs) {
 
 
 /*
-THINGS RELATED TO USING THE SOLVE BUTTON
+THINGS RELATED TO SOLVING THE PUZZLE
 */
 function movePieceAuto(fromLoc, toLoc) {
     let piecesInPlay = document.querySelectorAll("div[class*=pieceID]");
@@ -540,8 +540,23 @@ function solvePuzzle() {
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             let response = JSON.parse(this.responseText);
-            console.log(`Solution in ${response["data"]["coords"].length} steps`);
-            displaySteps(0, response["data"]["coords"]);
+            /*
+            IRL display steps should only happen after a solveModal pops up. What
+            I am trying to aim for here ...
+
+            - If the http response returns and is_solved == True, the solveModal will 
+            give user the option to Play the steps
+            - Clicking a `Play` button in that modal dispels the modal and invokes 
+            displaySteps()
+            - If the http response is_solved == False, we still display the shortdoc, but
+            provide an option to retry the solver OR we just straight up exit
+
+            This is making me think of a bunch of state changes that happen as a result of 
+            solutions. To get this rigged up, I may need to 
+
+            */
+            alert(response["shortdoc"]);
+            displaySteps(response["data"]["coords"]);
             //uhhh ... definitely get rid of this
             verboseStepLog(response)
         }
@@ -556,17 +571,16 @@ function solvePuzzle() {
 Apparently, executing a function every X seconds is non-trivial
 Following this: https://scottiestech.info/2014/07/01/javascript-fun-looping-with-a-delay/
 
-TODO: One move per second is preeety sloooooooow
+TODO: One move per second is preeety sloooooooow. Long term I should probably already
 */
-function displaySteps(stepIndex, stepArray) {
+function displaySteps(stepArray, stepIndex = 0, totalTime = 5000) {
+    let timePerStep = Math.floor(totalTime / stepArray.length);
     setTimeout(function () {
-        // console.log(stepIndex);
-        // console.log(stepArray[stepIndex])
         movePieceAuto(stepArray[stepIndex][0], stepArray[stepIndex][1]);
         if (++stepIndex < stepArray.length){
-            displaySteps(stepIndex, stepArray);
+            displaySteps(stepArray, stepIndex);
         }
-    },1000)
+    }, timePerStep)
 }
 
 
