@@ -231,6 +231,8 @@ using a fixed state as a test case for moving pieces, and putting each
 of the pieces in `piecesInPlay` at the appropriate places on the board
 */
 let stateString = "1525384358627583"
+// let stateString = "1827374551667281"
+// let stateString = "1221354454637282"
 // let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
 let queenLocs = getQueenLocations(b);
@@ -555,7 +557,7 @@ function solvePuzzle() {
             solutions. To get this rigged up, I may need to 
 
             */
-            showSolveStatusModal(response);
+            displaySolveStatusModal(response);
             //uhhh ... definitely get rid of this
             verboseStepLog(response)
         }
@@ -576,20 +578,35 @@ function solvePuzzle() {
             provide an option to retry the solver OR we just straight up exit
 
 */
-function showSolveStatusModal(httpResponse) {
+function displaySolveStatusModal(httpResponse) {
     let modal = document.getElementById("solveStatusModal");
     modal.style.display = "block";
+    populateSolveModal(httpResponse);
+    setButtonConsqequences(httpResponse);
+}
+
+
+/*
+Needs to be more complicated to support/facilitate retries
+*/
+function populateSolveModal(httpResponse) {
     let content = document.getElementById("modalContentContainer");
-    content.innerHTML = `<span class="sparkleSpan">&#10024 &#10024 &#10024</span>
+    let spanChar = httpResponse["is_solved"] ? "&#10024 " : "&#10060 "
+    let btnText = httpResponse["is_solved"] ? "Show Me The Solution!" : "Back to Board"
+    content.innerHTML = `<span> ${spanChar.repeat(8)}</span>
         <p>${httpResponse["message"]}</p>
-        <button id="playButton" class="displayStepsBtn"> 
-            Let's See!
-        </button>
-    ` 
-    let btn = document.getElementById("playButton");
-    btn.onclick = function () {
-        modal.style.display = "none";
-        displaySteps(httpResponse["solution"]["coords"]);
+        <button id="actionButton" class="closeModalBtn">
+        ${btnText}</button>`;
+}
+
+
+function setButtonConsqequences(httpResponse) {
+    let btn = document.getElementById("actionButton");
+    btn.onclick = function() {
+        document.getElementById("solveStatusModal").style.display = "none";
+        if (httpResponse["is_solved"]){
+            displaySteps(httpResponse["solution"]["coords"])
+        }
     }
 }
 
@@ -598,7 +615,7 @@ function showSolveStatusModal(httpResponse) {
 Apparently, executing a function every X seconds is non-trivial
 Following this: https://scottiestech.info/2014/07/01/javascript-fun-looping-with-a-delay/
 
-TODO: One move per second is preeety sloooooooow. Long term I should probably already
+TODO: Sound effects?
 */
 function displaySteps(stepArray, stepIndex = 0, totalTime = 5000) {
     let timePerStep = Math.floor(totalTime / stepArray.length);
