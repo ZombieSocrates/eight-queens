@@ -60,27 +60,27 @@ class baseSolver(object):
             return f"Took {self.move_limit} steps and found no solution..."
 
 
-    def retrieve_solution_steps(self):
-        '''TODO: The solve method should only call this particular method if 
-        we terminate with is_solved True
+    def walk_solution_path(self):
+        '''Will traverse self.seen_states backwards and builds out a 
+        representation of the steps that were taken by the solver. Returns an
+        object with a `coords` attribute--an array of fromCoord, toCoord that 
+        the front end can use to product the moves--and a `text` attribute--an 
+        array of human-readible sentences that...I'm not sure is actually 
+        useful?
         '''
-        solution_json = {
-            "is_solved": self.is_solved,
-            "shortdoc": self.solution_shortdoc(),
-            "data":defaultdict(list)
-        }
+        soln_path = defaultdict(list)
         pointB = self.board.get_state_string()
         while pointB is not None:
             pointA = self.seen_states[pointB]
             if pointA is not None:
                 txt_step = self.solution_step_as_text(parent_state = pointA, 
                     child_state = pointB)
-                solution_json["data"]["text"].insert(0, txt_step)
+                soln_path["text"].insert(0, txt_step)
                 crd_pair = self.solution_step_as_coords(parent_state = pointA, 
                     child_state = pointB)
-                solution_json["data"]["coords"].insert(0, crd_pair)
+                soln_path["coords"].insert(0, crd_pair)
             pointB = pointA    
-        return solution_json
+        return soln_path
 
 
     def get_change_between_states(self, parent_state, child_state):
@@ -109,9 +109,17 @@ class baseSolver(object):
 
 
 
-    def describe_step(self, parent_state, child_state):
+    def get_solution(self):
         '''deprecated'''
-        pass
+        out_json = {
+            "is_solved":self.is_solved,
+            "message":self.solution_shortdoc()
+            }
+        if not self.is_solved:
+            out_json["n_tries_made"] = self.move_limit
+        else:
+            out_json["solution"] = self.walk_solution_path()
+        return out_json
 
 
     def solve(self):
@@ -120,7 +128,7 @@ class baseSolver(object):
         raise NotImplementedError
 
 
-class columnwiseCSPSolver(baseSolver):
+class minConflictColumnSolver(baseSolver):
     
 
     def prioritize_queens(self):
@@ -245,9 +253,8 @@ class columnwiseCSPSolver(baseSolver):
             - Find a new column in the same row that minimizes conflicts
             - Move the queen to that column
         
-        TODO: For the time being, we're returning human-readable steps 
-        for the puzzle's solution, but this may eventually need to pass 
-        back some format that a browser can understand.
+        Returns nothing; all returning of data is handled in the 
+        get_solution method()...
         '''
         if verbose:
             print(f"Solving the {self.board.dim}-queens problem ...")
@@ -268,7 +275,6 @@ class columnwiseCSPSolver(baseSolver):
                     if verbose:
                         self.board.display()
                     pdb.set_trace()
-        return self.retrieve_solution_steps()
 
 
     def random_queen_to_random_col(self):
@@ -291,11 +297,10 @@ class columnwiseCSPSolver(baseSolver):
 if __name__ == "__main__":
     
     cb = chessBoard(dimension = 8, state_string = "1525384358627583")
-    sv = columnwiseCSPSolver(board_object = cb, max_moves = 50)
-    soln_json = sv.solve()
+    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    sv.solve()
     print(sv.solution_shortdoc())
-    #TODO: Actually return the solution in a way the frontend can handle
-    # pdb.set_trace()
+    pdb.set_trace()
     pprint(soln_json)
 
 

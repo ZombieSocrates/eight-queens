@@ -548,7 +548,7 @@ function solvePuzzle() {
             give user the option to Play the steps
             - Clicking a `Play` button in that modal dispels the modal and invokes 
             displaySteps()
-            - If the http response is_solved == False, we still display the shortdoc, but
+            - If the http response is_solved == False, we still display the message, but
             provide an option to retry the solver OR we just straight up exit
 
             This is making me think of a bunch of state changes that happen as a result of 
@@ -572,7 +572,7 @@ function solvePuzzle() {
             give user the option to Play the steps
             - Clicking a `Play` button in that modal dispels the modal and invokes 
             displaySteps()
-            - If the http response is_solved == False, we still display the shortdoc, but
+            - If the http response is_solved == False, we still display the message, but
             provide an option to retry the solver OR we just straight up exit
 
 */
@@ -581,7 +581,7 @@ function showSolveStatusModal(httpResponse) {
     modal.style.display = "block";
     let content = document.getElementById("modalContentContainer");
     content.innerHTML = `<span class="sparkleSpan">&#10024 &#10024 &#10024</span>
-        <p>${httpResponse["shortdoc"]}</p>
+        <p>${httpResponse["message"]}</p>
         <button id="playButton" class="displayStepsBtn"> 
             Let's See!
         </button>
@@ -589,7 +589,7 @@ function showSolveStatusModal(httpResponse) {
     let btn = document.getElementById("playButton");
     btn.onclick = function () {
         modal.style.display = "none";
-        displaySteps(httpResponse["data"]["coords"]);
+        displaySteps(httpResponse["solution"]["coords"]);
     }
 }
 
@@ -616,7 +616,7 @@ the solution crops up?
 */
 function verboseStepLog(httpResponse) {
     console.log("Here's what we did")
-    httpResponse["data"]["text"].forEach( x => console.log(x));
+    httpResponse["solution"]["text"].forEach( x => console.log(x));
 }
 
 
