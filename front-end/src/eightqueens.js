@@ -555,8 +555,7 @@ function solvePuzzle() {
             solutions. To get this rigged up, I may need to 
 
             */
-            alert(response["shortdoc"]);
-            displaySteps(response["data"]["coords"]);
+            showSolveStatusModal(response);
             //uhhh ... definitely get rid of this
             verboseStepLog(response)
         }
@@ -566,6 +565,34 @@ function solvePuzzle() {
     // xmlhttp.setRequestHeader("Access-Control-Allow-Origin","http://localhost:5000")
     xmlhttp.send();
 }
+
+
+/*
+- If the http response returns and is_solved == True, the solveModal will 
+            give user the option to Play the steps
+            - Clicking a `Play` button in that modal dispels the modal and invokes 
+            displaySteps()
+            - If the http response is_solved == False, we still display the shortdoc, but
+            provide an option to retry the solver OR we just straight up exit
+
+*/
+function showSolveStatusModal(httpResponse) {
+    let modal = document.getElementById("solveStatusModal");
+    modal.style.display = "block";
+    let content = document.getElementById("modalContentContainer");
+    content.innerHTML = `<span class="sparkleSpan">&#10024 &#10024 &#10024</span>
+        <p>${httpResponse["shortdoc"]}</p>
+        <button id="playButton" class="displayStepsBtn"> 
+            Let's See!
+        </button>
+    ` 
+    let btn = document.getElementById("playButton");
+    btn.onclick = function () {
+        modal.style.display = "none";
+        displaySteps(httpResponse["data"]["coords"]);
+    }
+}
+
 
 /*
 Apparently, executing a function every X seconds is non-trivial
@@ -583,8 +610,13 @@ function displaySteps(stepArray, stepIndex = 0, totalTime = 5000) {
     }, timePerStep)
 }
 
-
+/*
+Uh, maybe have this appear somewhere on the page when 
+the solution crops up?
+*/
 function verboseStepLog(httpResponse) {
     console.log("Here's what we did")
     httpResponse["data"]["text"].forEach( x => console.log(x));
 }
+
+
