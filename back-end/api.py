@@ -26,9 +26,8 @@ def solve_puzzle():
     '''
     board_dim = int(request.args["dimension"])
     board_state = request.args["state"]
-    max_moves = request.args.get("max_moves")
-    if max_moves is None:
-        max_moves = 50
+    move_arg = request.args.get("max_moves")
+    max_moves = 50 if move_arg is None else int(move_arg)
     cboard = chessBoard(dimension = board_dim, state_string = board_state)
     solver = minConflictColumnSolver(board_object = cboard, max_moves = max_moves)
     solver.solve()

@@ -230,8 +230,8 @@ for (i = 0; i < b.rows(); i++) {
 using a fixed state as a test case for moving pieces, and putting each
 of the pieces in `piecesInPlay` at the appropriate places on the board
 */
-let stateString = "1525384358627583"
-// let stateString = "1827374551667281"
+// let stateString = "1525384358627583"
+let stateString = "1827374551667281"
 // let stateString = "1221354454637282"
 // let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
@@ -533,33 +533,25 @@ function movePieceAuto(fromLoc, toLoc) {
     }
 }
 
-
-function solvePuzzle() {
+/*
+I should probably document this whole n_tries behavior much better. We
+do a max of 50 moves, unless we're initiating this funciton through 
+the Retry button, which will boost that limit by 50
+*/
+function solvePuzzle(moveLimit = undefined) {
     let xmlhttp = new XMLHttpRequest();
     let boardSize = b.rows();
     let boardState = getStateString(b);
     let url = `http://localhost:5000/solve?dimension=${boardSize}&state=${boardState}`
+    if (moveLimit !== undefined) {
+        url = `${url}&max_moves=${moveLimit}`
+    }
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             let response = JSON.parse(this.responseText);
-            /*
-            IRL display steps should only happen after a solveModal pops up. What
-            I am trying to aim for here ...
-
-            - If the http response returns and is_solved == True, the solveModal will 
-            give user the option to Play the steps
-            - Clicking a `Play` button in that modal dispels the modal and invokes 
-            displaySteps()
-            - If the http response is_solved == False, we still display the message, but
-            provide an option to retry the solver OR we just straight up exit
-
-            This is making me think of a bunch of state changes that happen as a result of 
-            solutions. To get this rigged up, I may need to 
-
-            */
             displaySolveStatusModal(response);
             //uhhh ... definitely get rid of this
-            verboseStepLog(response)
+            // verboseStepLog(response)
         }
     }
     xmlhttp.open("GET", url = url);
@@ -591,23 +583,39 @@ Needs to be more complicated to support/facilitate retries
 */
 function populateSolveModal(httpResponse) {
     let content = document.getElementById("modalContentContainer");
-    let spanChar = httpResponse["is_solved"] ? "&#10024 " : "&#10060 "
-    let btnText = httpResponse["is_solved"] ? "Show Me The Solution!" : "Back to Board"
+    let spanChar = httpResponse["is_solved"] ? "&#10024 " : "&#10060 ";
     content.innerHTML = `<span> ${spanChar.repeat(8)}</span>
-        <p>${httpResponse["message"]}</p>
-        <button id="actionButton" class="closeModalBtn">
-        ${btnText}</button>`;
+        <p>${httpResponse["message"]}</p>`;
+    if (httpResponse["is_solved"]){
+        content.innerHTML += `<button class="closeModalBtn"> 
+            Show Me The Solution!</button>`;
+    }
+    else {
+        content.innerHTML += `<button class="closeModalBtn"> 
+            Retry with ${bumpMoveLimit(httpResponse)} Steps</button>
+            <button class="closeModalBtn">
+            Back to Original Board </button>`;
+    }
 }
 
 
+/*
+BARF
+*/
 function setButtonConsqequences(httpResponse) {
-    let btn = document.getElementById("actionButton");
-    btn.onclick = function() {
-        document.getElementById("solveStatusModal").style.display = "none";
-        if (httpResponse["is_solved"]){
-            displaySteps(httpResponse["solution"]["coords"])
+    let actBtns = Array.from(document.getElementsByClassName("closeModalBtn"));
+    actBtns.forEach(function(b, i) {
+        b.style.backgroundColor = httpResponse["is_solved"] ? "#92eb34": "#7909e8";
+        b.onclick = function () {
+            document.getElementById("solveStatusModal").style.display = "none";
+            if (httpResponse["is_solved"]){
+                displaySteps(httpResponse["solution"]["coords"])
+            }
+            else if (!httpResponse["is_solved"] && i == 0) {
+                solvePuzzle(moveLimit = bumpMoveLimit(httpResponse))
+            } 
         }
-    }
+    });
 }
 
 
@@ -627,9 +635,16 @@ function displaySteps(stepArray, stepIndex = 0, totalTime = 5000) {
     }, timePerStep)
 }
 
+
+function bumpMoveLimit(httpResponse, by = 50) {
+    return httpResponse["n_tries_made"] + by;
+}
+
 /*
 Uh, maybe have this appear somewhere on the page when 
 the solution crops up?
+
+Or this could be deprecated/for debugging purpses only
 */
 function verboseStepLog(httpResponse) {
     console.log("Here's what we did")
