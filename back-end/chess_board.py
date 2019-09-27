@@ -1,4 +1,5 @@
 import random
+import pdb
 
 from collections import Counter
 
@@ -254,33 +255,47 @@ class chessBoard(object):
 
 
     def count_conflicts_by_queen(self):
-        '''Combine the results of the above three methods, breh. Then deletes any 
-        queen key that does not have any conflicts. '''
+        '''Combine the results of the above three methods, breh. Then deletes 
+        any queen key that does not have any conflicts. '''
         conf_dicts = [self.count_orthogonal_conflicts_by_queen(),
             self.count_diagonal_conflicts_by_queen()]
         conf_smash = self.combine_conflict_counts(conf_dicts)
         return {k:v for k,v in conf_smash.items() if v!= 0}
 
 
+    def is_row_conflicted(self):
+        '''TODO: this slick indexy trick would change if board.dim
+        is order of magnitude larger than 1 ...
+        '''
+        queens_by_row = Counter(self.board_state[::2])
+        return max(queens_by_row.values()) > 1
+
+
 if __name__ == "__main__":
 
-    print("Init from random number")
-    foo = chessBoard(dimension = 8, queen_seed = 42)
-    foo.display()
-    print("\n-----------")
-
-    print("Init from determined positions")
-    bar = chessBoard(dimension = 8, state_string = "1525384358627583")
-    bar.display()
-    print("\n-----------")
-
-
+    
     print("Failing with an invalid initialization string")
     for junky_str in ["","555"]:
         try:
             chessBoard(dimension = 8, state_string = junky_str)
         except NotImplementedError as e:
             print(f"\t{e}")
+
+    print("Init from random number")
+    foo = chessBoard(dimension = 8, queen_seed = 42)
+    foo.display()
+    print(f"Row conflicted? {foo.is_row_conflicted()}")
+    print("\n-----------")
+
+    print("Init from determined positions")
+    bar = chessBoard(dimension = 8, state_string = "1112131415161718")
+    bar.display()
+    print(f"Row conflicted? {bar.is_row_conflicted()}")
+    print("\n-----------")
+    pdb.set_trace()
+
+
+    
 
 
 
