@@ -87,10 +87,10 @@ class baseSolver(object):
         '''TODO (?): Won't always be slicing by two for larger orders of 
         magnitude of self.board.dim'''
         for v in range(self.board.dim):
-            parent_pos = parent_state[(2 * v):2 * (v + 1)]
-            child_pos = child_state[(2 * v):2 * (v + 1)]
-            if parent_pos != child_pos:
-                return parent_pos, child_pos
+            coord_p = parent_state[(2 * v):2 * (v + 1)]
+            coord_c = child_state[(2 * v):2 * (v + 1)]
+            if coord_p != coord_c:
+                return coord_p, coord_c
 
 
     def solution_step_as_coords(self, parent_state, child_state):
@@ -102,23 +102,69 @@ class baseSolver(object):
 
 
     def solution_step_as_text(self, parent_state, child_state):
-        p_pos, c_pos = self.get_change_between_states(parent_state, child_state)
-        s1 = f"Move queen at ({p_pos[0]},{p_pos[1]})"
-        s2 = f"to ({c_pos[0]},{c_pos[1]})"
+        coord_p, coord_c = self.get_change_between_states(parent_state, 
+            child_state)
+        s1 = f"Move queen at ({coord_p[0]},{coord_p[1]})"
+        s2 = f"to ({coord_c[0]},{coord_c[1]})"
         return " ".join([s1, s2]) 
 
 
+    def get_move_dimension(self, parent_state, child_state):
+        '''For collapsing successive moves in the same row/column together, we 
+        need to see whether an entry in self.seen_states is in "row 5" or "
+        column 3"
 
-    def get_solution(self):
-        '''deprecated'''
-        out_json = {
-            "is_solved":self.is_solved,
-            "message":self.solution_shortdoc()
-            }
+        TODO: This may need to be refactored if I support board.dim with order
+        of magnitude larger than 1
+        '''
+        coord_p, coord_c = self.get_change_between_states(parent_state, 
+            child_state)
+        if coord_p[0] == coord_c[0]:
+            return f"row {coord_p[0]}"
+        return f"col {coord_c[0]}"
+
+
+    def collapse_seen_states(self):
+        '''In some cases, our solver will make successive moves in the same
+        dimension (eg. a move from 1,5 to 1,4 followed by a move from 1,4 to 
+        1,8). This is a similar method to self.walk_solution_path, but it will
+        collapse successive states like this together into one move and 
+        recalculate some of the solver's metadata.
+
+        I apologize that this is not tremendously readable ...
+
+        TODO: Could be possible to try this within .solve to make sure that
+        when we hit a move limit 
+        '''
+        child = self.board.get_state_string()
+        while child is not None:
+            parent = self.seen_states[child]
+            grandparent = self.seen_states[parent]
+            if grandparent is None:
+                child = grandparent
+                continue
+            this_move_dim = self.get_move_dimension(parent, child)
+            last_move_dim = self.get_move_dimension(grandparent, parent)
+            if this_move_dim == last_move_dim:
+                self.seen_states[child] = grandparent
+                self.seen_states.pop(parent)
+                # Turned out to be really to NOT increment child in this case
+            else:
+                child = parent
+        self.n_moves = self.tally_moves_made()
+
+
+    def get_solution(self, prune_solution = True):
+        '''Basically packages up the information from calling solver.solve()
+        in a format that our front end can interpret '''
+        out_json = {"is_solved":self.is_solved}
         if not self.is_solved:
             out_json["n_tries_made"] = self.move_limit
         else:
+            if prune_solution:
+                self.collapse_seen_states()
             out_json["solution"] = self.walk_solution_path()
+        out_json["message"] = self.solution_shortdoc()
         return out_json
 
 
@@ -299,8 +345,14 @@ if __name__ == "__main__":
     cb = chessBoard(dimension = 8, state_string = "1525384358627583")
     sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
     sv.solve()
+    print("ORIGINAL")
+    pprint(sv.walk_solution_path()["text"])
+    print(sv.solution_shortdoc())
+    print("PRUNED")
+    sv.collapse_seen_states()
+    pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
     pdb.set_trace()
-    pprint(soln_json)
+
 
 
