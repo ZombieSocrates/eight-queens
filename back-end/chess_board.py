@@ -1,10 +1,11 @@
 import random
-import pdb
+import ipdb
 
 from collections import Counter
 
 
 class chessBoard(object):
+
 
     def __init__(self, dimension, state_string = None, queen_seed = None):
         '''Sets up a chess board of a specified dimension and puts queens at
@@ -28,6 +29,16 @@ class chessBoard(object):
             self.rows = self.place_queens_from_state_string(state_string)
         self.q_locs = self.get_queen_locations()
         self.board_state = self.get_state_string()
+        self._make_move = {
+             "UP": lambda xy: (xy[0] - 1, xy[1]),
+             "DOWN": lambda xy: (xy[0] + 1, xy [1]),
+             "LEFT": lambda xy: (xy[0], xy[1] - 1),
+             "RIGHT": lambda xy: (xy[0], xy [1]  + 1),
+             "UP_LEFT": lambda xy: (xy[0] - 1, xy[1] - 1),
+             "UP_RIGHT": lambda xy: (xy[0] - 1, xy[1] + 1),
+             "DOWN_LEFT": lambda xy: (xy[0] + 1, xy[1] - 1),
+             "DOWN_RIGHT": lambda xy: (xy[0] + 1, xy[1] + 1),
+             }
 
 
     def random_queen_each_row(self, queen_seed):
@@ -147,70 +158,63 @@ class chessBoard(object):
             r_ind = int(state_string[(2*i)]) - 1
             c_ind = int(state_string[2*i + 1]) - 1
             rows[r_ind][c_ind] = 1
-        return rows
+        return rows       
+
+
+    def _out_of_bounds(self, coord):
+        if (max(coord) >= self.dim) or (min(coord) < 0):
+                return True
+        return False
+
+
+    def _move_in_direction(self, direction, coord, blocked_coords, 
+        ok_moves = []):
+        '''
+        Calculate the valid moves in a single direction (string) that 
+        you can make from coord, taking into account any blocked
+        coordinates specified in blocked coords.
+
+        Somehow, repeatedly calling this function is saving the ok_moves
+        variable...OH WELL NO TIME TO FIX THIS THIS NOW LAWLLL
+        '''
+        if direction not in self._make_move.keys():
+            valid_dirs = ",".join([d for d in self._make_move.keys()])
+            err = f"Invalid direction: Must be one of {valid_dirs}"
+            raise ValueError(err)
+        next_coord = self._make_move[direction](coord)
+        off_board = self._out_of_bounds(next_coord)
+        hit_piece = next_coord in blocked_coords
+        if not off_board and not hit_piece:
+            ok_moves.append(next_coord)
+            self._move_in_direction(direction, next_coord, 
+                blocked_coords, ok_moves)
+        return ok_moves
             
 
-   
-    def check_up_and_left(self, coord):
-        '''Generate a valid coordinate one unit up and left from coord.
-        Would be a private method if python did that ... '''
-        new_coord = coord[0] - 1, coord[1] - 1
-        if (new_coord[0] >= 0) and (new_coord[1] >= 0):
-            return new_coord
-        return None
+    def get_move_coords(self, base_coord, directions_to_move, blocked_coords):
+        '''Calculate all moves from base_coord in the directions specified in 
+        directions_to_move, taking into account any blocked locations 
+        specified in blocked_coords
+        '''
+        avail_coords = []
+        if not directions_to_move:
+            directions_to_move = [d for d in self._make_move.keys()]
+        for d in directions_to_move:
+            dir_moves = self._move_in_direction(direction = d, 
+                coord = base_coord, blocked_coords = blocked_coords, 
+                ok_moves = [])
+            avail_coords.extend(dir_moves)
+        return avail_coords
 
 
-    def check_up_and_right(self, coord):
-        '''Generate a valid coordinate one unit up and right from coord.
-        Would be a private method if python did that ... '''
-        bound = self.dim - 1
-        new_coord = coord[0] - 1, coord[1] + 1
-        if (new_coord[0] >= 0) and (new_coord[1] <= bound):
-            return new_coord
-        return None
+    def get_diagonals(self, base_coord):
+        diag_directions = [d for d in self._make_move.keys() if "_" in d]
+        return self.get_move_coords(base_coord, 
+            directions_to_move = diag_directions,
+            blocked_coords = [])
+        
 
 
-    def check_down_and_right(self, coord):
-        '''Generate a valid coordinate one unit down and right from coord.
-        Would be a private method if python did that ... '''
-        bound = self.dim - 1
-        new_coord = coord[0] + 1, coord[1] + 1
-        if (new_coord[0] <= bound) and (new_coord[1] <= bound):
-            return new_coord
-        return None
-
-
-    def check_down_and_left(self, coord):
-        '''Generate a valid coordinate one unit down and left from coord.
-        Would be a private method if python did that ... '''
-        bound = self.dim - 1
-        new_coord = coord[0] + 1, coord[1] - 1
-        if (new_coord[0] <= bound) and (new_coord[1] >= 0):
-            return new_coord
-        return None
-
-
-    def get_diagonals(self, coord):
-        '''Calculates all the relative diagonal positions from the given 
-        coordinate, mainly for the purpose of saying "Is there a queen in any 
-        of these diagonal positions?" '''
-        diags = []
-        diag_checker = {"up_left":self.check_up_and_left, 
-            "up_right":self.check_up_and_right,
-            "down_right":self.check_down_and_right,
-            "down_left":self.check_down_and_left
-            }
-        for d in diag_checker.keys():
-            new_pos = diag_checker[d](coord)
-            if new_pos is None:
-                continue
-            else:
-                while new_pos is not None:
-                    diags.append(new_pos)
-                    new_pos = diag_checker[d](new_pos)
-        return diags
-
-    
     def count_orthogonal_conflicts_by_queen(self):
         '''Returns a dictionary keyed by queen_index (0th queen, 1st queen) 
         with values as the number of conflicts that queen is creating in 
@@ -264,11 +268,28 @@ class chessBoard(object):
 
 
     def is_row_conflicted(self):
-        '''TODO: this slick indexy trick would change if board.dim
-        is order of magnitude larger than 1 ...
         '''
-        queens_by_row = Counter(self.board_state[::2])
+        '''
+        queens_by_row = Counter([x[0] for x in self.q_locs.values()])
         return max(queens_by_row.values()) > 1
+
+
+    def find_unoccupied_rows(self):
+        '''As I'm doing all of this row conflict stuff, I'm 
+        avoiding the urge to refactor/simplify all of this `check_up_left_down`
+        stuff more like I did in the js front-end....
+        '''
+        occupied_rows = set([x[0] for x in self.q_locs.values()])
+        all_rows = set([r for r in range(self.dim)])
+        return list(all_rows.difference(occupied_rows))
+
+
+    def foo(self):
+        '''
+        THEN I STARTED REFACTORING DIRECTIONS AND BROKE LITERALLY EVERYTHING...
+        '''
+        pass
+
 
 
 if __name__ == "__main__":
@@ -285,14 +306,18 @@ if __name__ == "__main__":
     foo = chessBoard(dimension = 8, queen_seed = 42)
     foo.display()
     print(f"Row conflicted? {foo.is_row_conflicted()}")
+    print(f"Unoccupied Rows: {foo.find_unoccupied_rows()}")
     print("\n-----------")
+    ipdb.set_trace()
+    # foo.get_move_coords(foo.q_locs[0])
 
     print("Init from determined positions")
     bar = chessBoard(dimension = 8, state_string = "1112131415161718")
     bar.display()
     print(f"Row conflicted? {bar.is_row_conflicted()}")
+    print(f"Unoccupied Rows: {bar.find_unoccupied_rows()}")
     print("\n-----------")
-    pdb.set_trace()
+    
 
 
     

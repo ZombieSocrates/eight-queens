@@ -42,26 +42,13 @@ function getNextCoordinate(coord, direction) {
 }
 
 
-function checkOutOfBounds(coord, boardSize, direction) {
-    let upperBound = boardSize - 1
-    switch (direction) {
-        case directions.UP:
-            return (coord[0] < 0)
-        case directions.DOWN:
-            return (coord[0] > upperBound)
-        case directions.LEFT:
-            return (coord[1] < 0)
-        case directions.RIGHT:
-            return (coord[1] > upperBound)
-        case directions.UP_LEFT:
-            return (coord[0] < 0) || (coord[1] < 0)
-        case directions.UP_RIGHT:
-            return (coord[0] < 0) || (coord[1] > upperBound)
-        case directions.DOWN_LEFT:
-            return (coord[0] > upperBound) || (coord[1] < 0)
-        case directions.DOWN_RIGHT:
-            return (coord[0] > upperBound) || (coord[1] > upperBound)
+function checkOutOfBounds(coord, boardSize) {
+    let minOfCoord = coord.reduce((a,b) => a < b ? a : b);
+    let maxOfCoord = coord.reduce((a,b) => a > b ? a : b);
+    if ((minOfCoord < 0) || (maxOfCoord >= boardSize)) {
+        return true
     }
+    return false 
 }
 
 /*
@@ -69,8 +56,8 @@ Fun fact: The Javascript equality operator will only return true if they
 reference the same object. This means that [1,3] != [1,3], and this function 
 gets around that
 */
-function checkIfOccupied(coord, queenLocsArray) {
-    let queenLocsStr = JSON.stringify(queenLocsArray)
+function checkIfOccupied(coord, blockedCoordsArray) {
+    let queenLocsStr = JSON.stringify(blockedCoordsArray)
     let coordStr = JSON.stringify(coord)
     return queenLocsStr.indexOf(coordStr) > -1 ? true : false
 }
@@ -79,35 +66,32 @@ function checkIfOccupied(coord, queenLocsArray) {
 TODO:
 Right now this function relies on one global scope variable b.rows()...if I refactor
 this into a separate file that would be problematic
-
-Also, the way I'm using queenLocsArray, it's really more like barrierLocs, so I should
-rename that
 */
-function movesInDirection(coord, queenLocsArray, direction, moves = []) {
-    let blocked = false;
-    while (!blocked) {
-        let newCoord = getNextCoordinate(coord, direction)
-        let hitPiece = checkIfOccupied(newCoord, queenLocsArray)
-        let outOfBounds = checkOutOfBounds(coord = newCoord, 
-            boardSize = b.rows(), 
-            direction = direction)
-        if (!hitPiece && !outOfBounds) {
-            moves.push(newCoord)
-            movesInDirection(newCoord, queenLocsArray, direction, moves)
-        }
-        else {blocked = true}
-    return moves
+function movesInDirection(coord, blockedCoordsArray, direction, moves = []) {
+
+    let newCoord = getNextCoordinate(coord, direction)
+    let hitPiece = checkIfOccupied(newCoord, blockedCoordsArray)
+    let outOfBounds = checkOutOfBounds(coord = newCoord, 
+        boardSize = b.rows()) 
+    if (!hitPiece && !outOfBounds) {
+        moves.push(newCoord)
+        movesInDirection(newCoord, blockedCoordsArray, direction, moves)
     }
+    return moves
 }
 
 /*
+Calculate all moves in the directions specified in moveDirections, taking 
+into account any blocked locations in blockedCoordsArray
+
+
 TODO: Would be excellent to put everything that getMoves() depends on into
 a separate import ... potentially along with showMoves()
 */
-function getMoves(coord, queenLocsArray) {
+function getMoves(coord, moveDirections, blockedCoordsArray) {
     let possibleMoves = [];
-    Object.values(directions).forEach(function(dir) {
-        let dirMoves = movesInDirection(coord, queenLocsArray, dir)
+    moveDirections.forEach(function(dir) {
+        let dirMoves = movesInDirection(coord, blockedCoordsArray, dir)
         possibleMoves.push(...dirMoves)
         }
     )
@@ -280,7 +264,11 @@ function showMoves(piece) {
 
     resetBoard();
     let pieceLoc = b.cell(piece.parentNode).where();
-    let newLocs = getMoves(pieceLoc, Object.values(queenLocs));
+    console.log(pieceLoc);
+    let newLocs = getMoves(coord = pieceLoc,
+        moveDirections = Object.values(directions), 
+        blockedCoordsArray = Object.values(queenLocs)
+        );
     bindMoveLocs = newLocs;
     bindMovePiece = piece;
     bindMoveEvents(bindMoveLocs);
@@ -423,25 +411,19 @@ function countOrthogonalConflicts(qLocs) {
 
 
 /*
-This is basically just calling getMoves EXCEPT
- - we're only doing it for certain directions 
- - we're ignoring the condition where we hit a queen by passing an empty queen locs array
+This just calling getMoves EXCEPT we're only doing it for certain directions 
+ and we're ignoring the condition where we hit a queen by 
+ making blockedCoordsArray empty
 
- TODO: Could I just refactor getMoves to take in a list of directions?
- Then I could either pass in Object.values(directions) or something like 
- Object.values(directions) .filter(d => d.indexOf("_") > -1)
+ Ideally would get refactored into a moves file but womp womp ...
 */
 function getDiagonals(loc) {
-    let diagSpaces = [];
-    Object.values(directions).forEach(function(dir) {
-        if (dir.indexOf("_") > -1) {
-            let dirMoves = movesInDirection(coord = loc, 
-                queenLocsArray = [], 
-                direction = dir);
-            diagSpaces.push(...dirMoves);
-        }
-    })
-    return diagSpaces
+    let diagDirs = Object.values(directions)
+        .filter(x => x.indexOf("_") > -1);
+    return getMoves(coord = loc, 
+        moveDirections = diagDirs,
+        blockedCoordsArray = []
+        )
 };
 
 
