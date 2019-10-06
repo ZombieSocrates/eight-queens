@@ -1,7 +1,7 @@
 import random
 import ipdb
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 
 class chessBoard(object):
@@ -267,28 +267,40 @@ class chessBoard(object):
         return {k:v for k,v in conf_smash.items() if v!= 0}
 
 
+    def get_queens_by_row(self):
+        '''Returns a dictionary of {row_idx:[list of q_idx]}
+
+        TODO: Should this just set an attribute of the class?
+        '''
+        queens_by_row = defaultdict(list)
+        for queen, position in self.q_locs.items():
+            queens_by_row[position[0]].append(queen)
+        return queens_by_row
+
+
     def is_row_conflicted(self):
+        '''If there's more than one queen in each row, we got PROBLEMS
         '''
-        '''
-        queens_by_row = Counter([x[0] for x in self.q_locs.values()])
-        return max(queens_by_row.values()) > 1
+        n_queens_per_row = [len(r) for r in self.get_queens_by_row().values()]
+        return max(n_queens_per_row) > 1
 
 
     def find_unoccupied_rows(self):
-        '''As I'm doing all of this row conflict stuff, I'm 
-        avoiding the urge to refactor/simplify all of this `check_up_left_down`
-        stuff more like I did in the js front-end....
         '''
-        occupied_rows = set([x[0] for x in self.q_locs.values()])
+        '''
+        occupied_rows = set([r for r in self.get_queens_by_row()])
         all_rows = set([r for r in range(self.dim)])
         return list(all_rows.difference(occupied_rows))
 
 
-    def foo(self):
+    def row_conflicted_queens(self):
+        '''If the board were in a row-conflicted state, these are the
+        queens that would need to move.
         '''
-        THEN I STARTED REFACTORING DIRECTIONS AND BROKE LITERALLY EVERYTHING...
-        '''
-        pass
+        rq = []
+        for queens in self.get_queens_by_row().values():
+            rq.extend(queens[1:])
+        return rq
 
 
 
@@ -307,16 +319,18 @@ if __name__ == "__main__":
     foo.display()
     print(f"Row conflicted? {foo.is_row_conflicted()}")
     print(f"Unoccupied Rows: {foo.find_unoccupied_rows()}")
+    print(f"MOVE DEEZ QUEENS: {foo.row_conflicted_queens()}")
     print("\n-----------")
-    ipdb.set_trace()
-    # foo.get_move_coords(foo.q_locs[0])
 
     print("Init from determined positions")
     bar = chessBoard(dimension = 8, state_string = "1112131415161718")
     bar.display()
     print(f"Row conflicted? {bar.is_row_conflicted()}")
     print(f"Unoccupied Rows: {bar.find_unoccupied_rows()}")
+    print(f"MOVE DEEZ QUEENS: {bar.row_conflicted_queens()}")
     print("\n-----------")
+
+    ipdb.set_trace()
     
 
 
