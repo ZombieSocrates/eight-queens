@@ -1,5 +1,5 @@
 import random
-import pdb
+import ipdb
 
 from collections import Counter, defaultdict
 from chess_board import chessBoard
@@ -239,55 +239,87 @@ class minConflictColumnSolver(baseSolver):
         queen_pq = self.prioritize_queens()
         for cand_qn in queen_pq:
             col_pq = self.prioritize_cols(cand_qn, conflict_cutoff)
+            qn_row = self.board.q_locs[cand_qn][0]
             for c_tuple in col_pq:
-                cand_col = c_tuple[0]
+                cand_coord = (qn_row, c_tuple[0])
                 cand_cnflct = c_tuple[1]
-                resulting_state = self.board.get_state_string(cand_qn, cand_col)
+                resulting_state = self.board.get_state_string(cand_qn, cand_coord)
                 if self.check_if_state_is_new(resulting_state):
-                    return cand_qn, cand_col, cand_cnflct
+                    return cand_qn, cand_coord, cand_cnflct
         if verbose:
             print("Relaxing conflict cutoff by one ...")
         return self.worst_queen_to_best_column(conflict_cutoff + 1, verbose)
 
 
-    def document_chosen_move(self, cand_queen, cand_col, rslt_conf):
+    def document_chosen_move(self, cand_queen, cand_coord, rslt_conf):
         '''For debugging in implementing repeated state checking.'''
         curr_conf = self.board.count_conflicts_by_queen()[cand_queen]
         focus_ind = self.board.q_locs[cand_queen]
-        focus_loc = (focus_ind[0] + 1, focus_ind[1] + 1)
-        print(f"{len(self.seen_states)}. Queen at {focus_loc} causes {curr_conf} conflicts.")
-        print(f"Moving to column {cand_col + 1} causes {rslt_conf} conflicts.")
+        init_loc = (focus_ind[0] + 1, focus_ind[1] + 1)
+        dest_loc = (cand_coord[0] + 1, cand_coord[1] + 1)
+        print(f"{len(self.seen_states)}. Queen at {init_loc} causes {curr_conf} conflicts.")
+        print(f"Moving to {dest_loc} causes {rslt_conf} conflicts.")
 
 
-    def update_board(self, focus_queen, dest_column):
-        '''Once you know the column you want to move the queen to, change the 
+    def update_board(self, focus_queen, dest_coord):
+        '''Once you know the place you want to move the queen to, change the 
         attributes of the underlying board to refelct that move. 
         '''
-        queen_start_pos = self.board.q_locs[focus_queen]
-        self.board.rows[queen_start_pos[0]][queen_start_pos[1]] = 0
-        self.board.rows[queen_start_pos[0]][dest_column] = 1
-        self.board.q_locs[focus_queen] = (queen_start_pos[0], dest_column)
+        init_coord = self.board.q_locs[focus_queen]
+        self.board.rows[init_coord[0]][init_coord[1]] = 0
+        self.board.rows[dest_coord[0]][dest_coord[1]] = 1
+        self.board.q_locs[focus_queen] = dest_coord
         # This is more of a housekeeping step rather than actually crucial
         self.board.board_state = self.board.get_state_string()
     
 
-    def update_seen_states(self, focus_queen, dest_column):
+    def update_seen_states(self, focus_queen, dest_coord):
         parent_st = self.board.get_state_string()
         child_st = self.board.get_state_string(move_queen = focus_queen, 
-            to_col = dest_column)
+            to_coord = dest_coord)
         self.seen_states.update({child_st:parent_st})
 
 
-    def move_queen_to_column(self, focus_queen, dest_column, verbose = False):
+    def move_queen_to_coord(self, focus_queen, dest_coord, verbose = False):
         '''Handles all the instance attributes that need to change when we've 
         actually decided move one of the queens: updates the history of seen 
         states, updates the board locations, checks to see if we're at a goal
         state, and increments the solver's move counter.
         '''
-        self.update_seen_states(focus_queen, dest_column)
-        self.update_board(focus_queen, dest_column)
+        self.update_seen_states(focus_queen, dest_coord)
+        self.update_board(focus_queen, dest_coord)
         self.is_solved = self.check_if_solved(verbose = verbose)
         self.below_limit = self.check_if_moves_remain()
+
+
+    def resolve_row_conflicts(self):
+        '''This might not work in all cases
+        '''
+        row_conf_queens = self.board.row_conflicted_queens()
+        unoccupied_rows = self.board.find_unoccupied_rows()
+        for qn in row_conf_queens:
+            possible_locs = self.moves_within_column(qn)
+            for row in unoccupied_rows:
+                best_dest = [c for c in possible_locs if c[0] == row]
+                if best_dest:
+                    print(f"We can move queen {qn} to {best_dest[0]}")
+                    row_conf_queens.remove(qn)
+                    unoccupied_rows.remove(row)
+                    # MAKE MOVE
+                    # call this function again with recalculated row_conf_queens and unoccupied rows
+                    ipdb.set_trace()
+                    break
+
+
+
+
+
+    def moves_within_column(self, focus_queen):
+        focus_loc = self.board.q_locs[focus_queen]
+        occupied_locs = [v for v in self.board.q_locs.values()]
+        return self.board.get_move_coords(base_coord = focus_loc,
+            directions_to_move = ["UP","DOWN"],
+            blocked_coords = occupied_locs)
 
        
     def solve(self, verbose = False, stop_each = None):
@@ -307,20 +339,25 @@ class minConflictColumnSolver(baseSolver):
             self.board.display()
         self.is_solved = self.check_if_solved(verbose = verbose)
         while not self.is_solved and self.below_limit:
-            mv_queen, mv_col, mv_conf = self.worst_queen_to_best_column(verbose = verbose)
+            # THIS IS WHERE WE SHOULD CHECK FOR ROW CONFLICTS AND
+            # GO INTO SOME SORT OF SUBROUTINE
+            if self.board.is_row_conflicted():
+                print("Now you know we got problems...and you know we can't solve them")
+                self.resolve_row_conflicts()          
+            mv_queen, mv_coord, mv_conf = self.worst_queen_to_best_column(verbose = verbose)
             # If we called the above once and didn't get a queen or a column, 
             # here's where we might sub in random_queen_to_random_col() 
             if verbose:
                 self.document_chosen_move(cand_queen = mv_queen, 
-                    cand_col = mv_col, rslt_conf = mv_conf)
-            self.move_queen_to_column(focus_queen = mv_queen, 
-                dest_column = mv_col, verbose = verbose)
+                    cand_coord = mv_coord, rslt_conf = mv_conf)
+            self.move_queen_to_coord(focus_queen = mv_queen, 
+                dest_coord = mv_coord, verbose = verbose)
             if isinstance(stop_each, int):
                 if not self.is_solved and ((self.n_moves) % stop_each == 0):
                     print(f"Pausing after {self.n_moves} steps.")
                     if verbose:
                         self.board.display()
-                    pdb.set_trace()
+                    ipdb.set_trace()
 
 
     def random_queen_to_random_col(self):
@@ -334,25 +371,37 @@ class minConflictColumnSolver(baseSolver):
         rand_queen = random.choice([v for v in range(self.board.dim)])
         curr_col = self.board.q_locs[rand_queen][1]
         rand_col = random.choice([v for v in range(self.board.dim) if v != curr_col])
-        resulting_state = self.board.get_state_string(rand_queen, rand_col)
+        new_rand_pos = (self.board.q_locs[rand_queen][0], rand_col)
+        resulting_state = self.board.get_state_string(rand_queen, new_rand_pos)
         if self.check_if_state_is_new(resulting_state):
-            return rand_queen, rand_col
+            return rand_queen, new_rand_pos
         return None, None
 
 
 if __name__ == "__main__":
     
-    cb = chessBoard(dimension = 8, state_string = "1525384358627583")
+    cb = chessBoard(dimension = 8, queen_seed = 42)
     sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
     sv.solve()
-    print("ORIGINAL")
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
-    print("PRUNED")
-    sv.collapse_seen_states()
-    pprint(sv.walk_solution_path()["text"])
-    print(sv.solution_shortdoc())
-    pdb.set_trace()
+    print("\n")
+
+
+    cb = chessBoard(dimension = 8, state_string = "1112131415161718")
+    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    sv.solve(verbose = True, stop_each = 1)
+    
+
+
+    # print("ORIGINAL")
+    # pprint(sv.walk_solution_path()["text"])
+    # print(sv.solution_shortdoc())
+    # print("PRUNED")
+    # sv.collapse_seen_states()
+    # pprint(sv.walk_solution_path()["text"])
+    # print(sv.solution_shortdoc())
+    
 
 
 

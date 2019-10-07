@@ -134,7 +134,7 @@ class chessBoard(object):
         return max(Counter(positions).values()) == 1
 
 
-    def get_state_string(self, move_queen = None, to_col = None):
+    def get_state_string(self, move_queen = None, to_coord = None):
         '''Returns a representation of the chess board's queen positions as a 
         (dim*2)-digit string. Every two characters is the row, column location 
         of a queen in the order they were initially placed on the board. 
@@ -146,7 +146,7 @@ class chessBoard(object):
         loc_strs = []
         for k, v in self.q_locs.items():
             if k == move_queen:
-                loc_strs.append(f"{v[0] + 1}{to_col + 1}")
+                loc_strs.append(f"{to_coord[0] + 1}{to_coord[1] + 1}")
             else:
                 loc_strs.append(f"{v[0] + 1}{v[1] + 1}")
         return "".join(loc_strs)
