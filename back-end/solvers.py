@@ -148,7 +148,7 @@ class baseSolver(object):
             if this_move_dim == last_move_dim:
                 self.seen_states[child] = grandparent
                 self.seen_states.pop(parent)
-                # Turned out to be really to NOT increment child in this case
+                # Turned out to be crucial to NOT increment child in this case
             else:
                 child = parent
         self.n_moves = self.tally_moves_made()
@@ -193,6 +193,11 @@ class minConflictColumnSolver(baseSolver):
         containing possible destination columns for that queen. The tuples are 
         like (column index, n_conflicts), with n_conflicts <= conflict_cutoff, 
         and the array itself is sorted by n_conflicts increasing 
+
+
+        TODO: If I am using queen_to_unoccupied_row(), all I need is to get the resultant
+        conflict score of that move ... I might be able to repurpose some stuff here
+        to do that.
         '''
         focus_ind = self.board.q_locs[focus_queen]
         conflicts_by_col = {k:0 for k in self.board.q_locs.keys()}
@@ -225,12 +230,7 @@ class minConflictColumnSolver(baseSolver):
         currently at. If that doesn't return anything, it will automatically 
         relax the cutoff until you find some slightly worse, but viable option.
 
-        TODO 1: the only reason we'd ever return the conflict_cutoff is to
-        be extra verbose about the move in the document_chosen_move method. 
-        Long-term I think this can just return the queen to move and 
-        the column.
-
-        TODO 2: Might be interesting to track how often the solver gets stuck in 
+        TODO 1: Might be interesting to track how often the solver gets stuck in 
         local optima and needs to re-call itself. That's the only reason for 
         the verbose parameter right now)
         '''
@@ -292,26 +292,18 @@ class minConflictColumnSolver(baseSolver):
         self.below_limit = self.check_if_moves_remain()
 
 
-    def resolve_row_conflicts(self):
-        '''This might not work in all cases
+    def queen_to_unoccupied_row(self):
+        '''Uh ... I think this should work, actually
         '''
         row_conf_queens = self.board.row_conflicted_queens()
         unoccupied_rows = self.board.find_unoccupied_rows()
         for qn in row_conf_queens:
-            possible_locs = self.moves_within_column(qn)
-            for row in unoccupied_rows:
-                best_dest = [c for c in possible_locs if c[0] == row]
-                if best_dest:
-                    print(f"We can move queen {qn} to {best_dest[0]}")
-                    row_conf_queens.remove(qn)
-                    unoccupied_rows.remove(row)
-                    # MAKE MOVE
-                    # call this function again with recalculated row_conf_queens and unoccupied rows
-                    ipdb.set_trace()
-                    break
-
-
-
+            new_row_coords = self.moves_within_column(qn)
+            for coord in new_row_coords:
+                if coord[0] in unoccupied_rows:
+                    # The only issue right now is I have no obvious way 
+                    # of figuring out the new conflict score of a move. 
+                    return qn, coord, "IMPLEMENT ME"
 
 
     def moves_within_column(self, focus_queen):
@@ -343,10 +335,11 @@ class minConflictColumnSolver(baseSolver):
             # GO INTO SOME SORT OF SUBROUTINE
             if self.board.is_row_conflicted():
                 print("Now you know we got problems...and you know we can't solve them")
-                self.resolve_row_conflicts()          
-            mv_queen, mv_coord, mv_conf = self.worst_queen_to_best_column(verbose = verbose)
-            # If we called the above once and didn't get a queen or a column, 
-            # here's where we might sub in random_queen_to_random_col() 
+                mv_queen, mv_coord, mv_conf = self.queen_to_unoccupied_row()
+            else:          
+                mv_queen, mv_coord, mv_conf = self.worst_queen_to_best_column(verbose = verbose)
+                # If we called the above once and didn't get a queen or a column, 
+                # here's where we might sub in random_queen_to_random_col() 
             if verbose:
                 self.document_chosen_move(cand_queen = mv_queen, 
                     cand_coord = mv_coord, rslt_conf = mv_conf)

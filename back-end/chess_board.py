@@ -214,7 +214,6 @@ class chessBoard(object):
             blocked_coords = [])
         
 
-
     def count_orthogonal_conflicts_by_queen(self):
         '''Returns a dictionary keyed by queen_index (0th queen, 1st queen) 
         with values as the number of conflicts that queen is creating in 
