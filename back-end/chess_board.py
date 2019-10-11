@@ -266,10 +266,66 @@ class chessBoard(object):
         return {k:v for k,v in conf_smash.items() if v!= 0}
 
 
+    def conflicts_for_move(self, move_queen, move_dim):
+        '''Let's assume you are moving focus_queen within either rows or
+        columns (dim  = 0 or dim = 1). This returns a dictionary 
+        where the keys are each row or column index and the values are
+        the number of conflicts you would have if you moved the queen
+        to that space from its current one.
+
+        Basically, this is an analog to count_conflicts_by_queen designed 
+        to measure future states instead of current ones. 
+
+        TODO 1: Could I make this better utilize self.combine_conflict_counts? 
+        Probably, but I', not certain this would 
+    
+        TODO 2: Port to the front end if we want to surface scores of 
+        hypothesized moves?
+
+        TODO 3: Implementing this to also take diagonal moves into account. 
+        It seems like it'd be hard but maybe not necessary.
+        '''
+        if move_dim not in [0, 1]:
+            e_msg = "Must calculate within rows (0) or columns (1)"
+            raise NotImplementedError(e_msg)
+        conflicts_by_move_dim = {k:0 for k in self.q_locs.keys()}
+        curr_coord = self.q_locs[move_queen]
+        # Check conflicts within move dim - Also, should this be a standalone function
+        # that just makes a conflict_by_dim dictionary?
+        queen_count_by_move_dim = Counter(v[move_dim] for v in self.q_locs.values())
+        for idx, q_count in queen_count_by_move_dim.items():
+            if idx == curr_coord[move_dim]:
+                conflicts_by_move_dim[idx] += q_count - 1
+            else:
+                conflicts_by_move_dim[idx] += q_count
+        # Check diagonals - Also, should this be a standalone function
+        # that just makes a conflict_by_dim dictionary?
+        other_queen_coords = [x for x in self.q_locs.values() if x != curr_coord]
+        for k in conflicts_by_move_dim.keys():
+            move_coord = self._get_orthogonal_move(curr_coord, move_dim, k)
+            diags = self.get_diagonals(move_coord)
+            diag_conf = set(diags).intersection(set(other_queen_coords))
+            conflicts_by_move_dim[k] += len(diag_conf)
+        # Then we would combine them?
+        # Removing the record in this dict for the queen's current position.
+        del(conflicts_by_move_dim[curr_coord[move_dim]])
+        return conflicts_by_move_dim
+
+
+    def _get_orthogonal_move(self, base_coord, move_dim, move_dest):
+        '''If we're moving in row space, our column stays constant and
+        vice versa
+        '''
+        constant_dim = 1 - move_dim
+        if move_dim == 1:
+            return (base_coord[constant_dim], move_dest)
+        return (move_dest, base_coord[constant_dim])
+
+
+
+
     def get_queens_by_row(self):
         '''Returns a dictionary of {row_idx:[list of q_idx]}
-
-        TODO: Should this just set an attribute of the class?
         '''
         queens_by_row = defaultdict(list)
         for queen, position in self.q_locs.items():
@@ -302,10 +358,12 @@ class chessBoard(object):
         return rq
 
 
+    
+
 
 if __name__ == "__main__":
 
-    
+    #TODO: Maybe move these to a test folder?
     print("Failing with an invalid initialization string")
     for junky_str in ["","555"]:
         try:

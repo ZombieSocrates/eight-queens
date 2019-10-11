@@ -199,22 +199,7 @@ class minConflictColumnSolver(baseSolver):
         conflict score of that move ... I might be able to repurpose some stuff here
         to do that.
         '''
-        focus_ind = self.board.q_locs[focus_queen]
-        conflicts_by_col = {k:0 for k in self.board.q_locs.keys()}
-        # Check columns - Also, should this be a standalone function?
-        curr_queens_by_col = Counter(v[1] for v in self.board.q_locs.values())
-        for col, q_count in curr_queens_by_col.items():
-            if col == focus_ind[1]:
-                conflicts_by_col[col] += q_count - 1
-            else:
-                conflicts_by_col[col] += q_count
-        # Check diagonals - Also, should this be a standalone function?
-        other_inds = [x for x in self.board.q_locs.values() if x != focus_ind]
-        for k in conflicts_by_col.keys():
-            diags = self.board.get_diagonals((focus_ind[0],k))
-            diag_conf = set(diags).intersection(set(other_inds))
-            conflicts_by_col[k] += len(diag_conf)
-        del(conflicts_by_col[focus_ind[1]])
+        conflicts_by_col = self.board.conflicts_for_move(focus_queen,1)
         improve_cols = [v for v in conflicts_by_col.items() if v[1] <= conflict_cutoff]
         return sorted(improve_cols, key = lambda v: v[1])
 
@@ -292,6 +277,14 @@ class minConflictColumnSolver(baseSolver):
         self.below_limit = self.check_if_moves_remain()
 
 
+    def moves_within_column(self, focus_queen):
+        focus_loc = self.board.q_locs[focus_queen]
+        occupied_locs = [v for v in self.board.q_locs.values()]
+        return self.board.get_move_coords(base_coord = focus_loc,
+            directions_to_move = ["UP","DOWN"],
+            blocked_coords = occupied_locs)
+
+
     def queen_to_unoccupied_row(self):
         '''Uh ... I think this should work, actually
         '''
@@ -301,26 +294,33 @@ class minConflictColumnSolver(baseSolver):
             new_row_coords = self.moves_within_column(qn)
             for coord in new_row_coords:
                 if coord[0] in unoccupied_rows:
+                    conflicts_by_row = self.board.conflicts_for_move(qn, 0)
                     # The only issue right now is I have no obvious way 
                     # of figuring out the new conflict score of a move. 
-                    return qn, coord, "IMPLEMENT ME"
+                    return qn, coord, conflicts_by_row[coord[0]]
 
 
-    def moves_within_column(self, focus_queen):
-        focus_loc = self.board.q_locs[focus_queen]
-        occupied_locs = [v for v in self.board.q_locs.values()]
-        return self.board.get_move_coords(base_coord = focus_loc,
-            directions_to_move = ["UP","DOWN"],
-            blocked_coords = occupied_locs)
+    def choose_next_move(self, verbose = False):
+        '''The solver will only ever use two move choosing strategies. This
+        arbitrates between the two of them.
+
+        Returns the index of the queen to be moved, the location we
+        will move it to, and a conflict score that is helpful for server-side 
+        debugging but (at least for the time being, isn't surfaced now
+        '''
+        if self.board.is_row_conflicted():
+            return self.queen_to_unoccupied_row()
+        return self.worst_queen_to_best_column(verbose = verbose)
 
        
     def solve(self, verbose = False, stop_each = None):
         '''This is the main public method, essentially repeats the following 
-        three steps as long as the board isn't solved and we're under the move 
+        four  steps as long as the board isn't solved and we're under the move 
         threshold for the solver
 
-            - Find the queen that has the most conflicts
-            - Find a new column in the same row that minimizes conflicts
+            - If there are unoccupied rows, move a queen to an unoccupied row
+            - Otherwise, find the queen that has the most conflicts
+            - find a new column in the same row that minimizes conflicts
             - Move the queen to that column
         
         Returns nothing; all returning of data is handled in the 
@@ -333,13 +333,7 @@ class minConflictColumnSolver(baseSolver):
         while not self.is_solved and self.below_limit:
             # THIS IS WHERE WE SHOULD CHECK FOR ROW CONFLICTS AND
             # GO INTO SOME SORT OF SUBROUTINE
-            if self.board.is_row_conflicted():
-                print("Now you know we got problems...and you know we can't solve them")
-                mv_queen, mv_coord, mv_conf = self.queen_to_unoccupied_row()
-            else:          
-                mv_queen, mv_coord, mv_conf = self.worst_queen_to_best_column(verbose = verbose)
-                # If we called the above once and didn't get a queen or a column, 
-                # here's where we might sub in random_queen_to_random_col() 
+            mv_queen, mv_coord, mv_conf = self.choose_next_move()
             if verbose:
                 self.document_chosen_move(cand_queen = mv_queen, 
                     cand_coord = mv_coord, rslt_conf = mv_conf)
@@ -373,6 +367,8 @@ class minConflictColumnSolver(baseSolver):
 
 if __name__ == "__main__":
     
+    #TODO: Maybe move these to a tests folder?
+    # Solution for a non row-conflicted board
     cb = chessBoard(dimension = 8, queen_seed = 42)
     sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
     sv.solve()
@@ -380,20 +376,25 @@ if __name__ == "__main__":
     print(sv.solution_shortdoc())
     print("\n")
 
-
+    # Solution for a row conflicted board
     cb = chessBoard(dimension = 8, state_string = "1112131415161718")
     sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
-    sv.solve(verbose = True, stop_each = 1)
-    
+    sv.solve(verbose = True, stop_each = 7)
+    pprint(sv.walk_solution_path()["text"])
+    print(sv.solution_shortdoc())
+    print("\n")
 
-
-    # print("ORIGINAL")
-    # pprint(sv.walk_solution_path()["text"])
-    # print(sv.solution_shortdoc())
-    # print("PRUNED")
-    # sv.collapse_seen_states()
-    # pprint(sv.walk_solution_path()["text"])
-    # print(sv.solution_shortdoc())
+    # Test case for pruning solution path
+    cb = chessBoard(dimension = 8, state_string = "1525384358627583")
+    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    print("ORIGINAL")
+    sv.solve()
+    pprint(sv.walk_solution_path()["text"])
+    print(sv.solution_shortdoc())
+    print("PRUNED")
+    sv.collapse_seen_states()
+    pprint(sv.walk_solution_path()["text"])
+    print(sv.solution_shortdoc())
     
 
 
