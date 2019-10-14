@@ -199,7 +199,7 @@ class minConflictColumnSolver(baseSolver):
         conflict score of that move ... I might be able to repurpose some stuff here
         to do that.
         '''
-        conflicts_by_col = self.board.conflicts_for_move(focus_queen,1)
+        conflicts_by_col = self.board.count_conflicts_at_square(focus_queen,1)
         improve_cols = [v for v in conflicts_by_col.items() if v[1] <= conflict_cutoff]
         return sorted(improve_cols, key = lambda v: v[1])
 
@@ -294,9 +294,7 @@ class minConflictColumnSolver(baseSolver):
             new_row_coords = self.moves_within_column(qn)
             for coord in new_row_coords:
                 if coord[0] in unoccupied_rows:
-                    conflicts_by_row = self.board.conflicts_for_move(qn, 0)
-                    # The only issue right now is I have no obvious way 
-                    # of figuring out the new conflict score of a move. 
+                    conflicts_by_row = self.board.count_conflicts_at_square(qn, 0)
                     return qn, coord, conflicts_by_row[coord[0]]
 
 

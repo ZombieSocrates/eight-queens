@@ -116,8 +116,8 @@ class chessBoard(object):
         dimensions of the board?
         '''
         try:
-            min_cond = int(min(state_string)) == 1
-            max_cond = int(max(state_string)) == self.dim
+            min_cond = int(min(state_string)) >= 1
+            max_cond = int(max(state_string)) <= self.dim
         except ValueError as e:
             return False
         return (max_cond & min_cond)
@@ -214,7 +214,7 @@ class chessBoard(object):
             blocked_coords = [])
         
 
-    def count_orthogonal_conflicts_by_queen(self):
+    def _orthogonal_conflicts_by_queen(self):
         '''Returns a dictionary keyed by queen_index (0th queen, 1st queen) 
         with values as the number of conflicts that queen is creating in 
         orthogonal directions (rows or columns).
@@ -231,7 +231,7 @@ class chessBoard(object):
         return orth_conf_dict
 
 
-    def count_diagonal_conflicts_by_queen(self):
+    def _diagonal_conflicts_by_queen(self):
         '''Returns a dictionary keyed by queen_index (0th queen, 1st queen) 
         with values as the number of conflicts that queen is creating in 
         diagonal directions. '''
@@ -260,13 +260,74 @@ class chessBoard(object):
     def count_conflicts_by_queen(self):
         '''Combine the results of the above three methods, breh. Then deletes 
         any queen key that does not have any conflicts. '''
-        conf_dicts = [self.count_orthogonal_conflicts_by_queen(),
-            self.count_diagonal_conflicts_by_queen()]
+        conf_dicts = [self._orthogonal_conflicts_by_queen(),
+            self._diagonal_conflicts_by_queen()]
         conf_smash = self.combine_conflict_counts(conf_dicts)
         return {k:v for k,v in conf_smash.items() if v!= 0}
 
 
-    def conflicts_for_move(self, move_queen, move_dim):
+    def _validate_dim(self, change_dim):
+        if change_dim not in [0,1]:
+            e_msg = "Right now, you can change either row (0) or column (1)"
+            raise NotImplementedError(e_msg)
+        return change_dim
+
+
+    def _orthogonal_conflicts_by_square(self, change_dim):
+        '''Return the number of queens within each row (change_dim = 0)
+        or column (change_dim = 1). This is the number of conflicts we
+        would incur if we moved within said dimension
+
+        TODO: Is this really that different from 
+        self._orthogonal_conflicts_by_queen?
+        '''
+        cdim = self._validate_dim(change_dim)
+        return Counter([v[cdim] for v in self.q_locs.values()])
+
+
+    def _diagonal_conflicts_by_square(self, base_coord, change_dim):
+        '''Return the number of diagonal conflicts we would incur
+        if we moved from base_coord to any possible space within 
+        the current row (change_dim = 0) or column (change_dim = 1)
+
+        TODO: Is this really that different from 
+        self._diagonal_conflicts_by_queen?
+        '''
+        cdim = self._validate_dim(change_dim)
+        diag_conf = {}
+        queen_coords = [x for x in self.q_locs.values()] #if x != base_coord]
+        for k in self.q_locs.keys():
+            move_coord = self._get_orthogonal_move(base_coord, cdim, k)
+            diags = self.get_diagonals(move_coord)
+            n_conf = set(diags).intersection(set(queen_coords))
+            diag_conf[k] = len(n_conf)
+        return diag_conf
+
+
+    def _get_orthogonal_move(self, base_coord, change_dim, move_dest):
+        '''If we're moving in row space, our column stays constant and
+        vice versa
+        '''
+        constant_dim = 1 - change_dim
+        if change_dim == 1:
+            return (base_coord[constant_dim], move_dest)
+        return (move_dest, base_coord[constant_dim])
+
+
+    def _get_base_conflicts(self, base_coord, change_dim):
+        '''
+        If you're moving a queen within a row, there's a certain number of 
+        pre-existing column conflicts that will impact that move,  and vice 
+        versa. This preloads the result of self.count_conflicts_at_square() 
+        with existing conflicts in a constant dimension.
+        '''
+        const_dim = 1 - self._validate_dim(change_dim)
+        dim_confs = self._orthogonal_conflicts_by_square(const_dim)
+        exist_confs = dim_confs[base_coord[const_dim]] - 1
+        return {k: exist_confs for k in self.q_locs.keys()}
+
+
+    def count_conflicts_at_square(self, move_queen, change_dim):
         '''Let's assume you are moving focus_queen within either rows or
         columns (dim  = 0 or dim = 1). This returns a dictionary 
         where the keys are each row or column index and the values are
@@ -275,53 +336,19 @@ class chessBoard(object):
 
         Basically, this is an analog to count_conflicts_by_queen designed 
         to measure future states instead of current ones. 
-
-        TODO 1: Could I make this better utilize self.combine_conflict_counts? 
-        Probably, but I', not certain this would 
     
-        TODO 2: Port to the front end if we want to surface scores of 
+        TODO 1: Port to the front end if we want to surface scores of 
         hypothesized moves?
 
         TODO 3: Implementing this to also take diagonal moves into account. 
         It seems like it'd be hard but maybe not necessary.
         '''
-        if move_dim not in [0, 1]:
-            e_msg = "Must calculate within rows (0) or columns (1)"
-            raise NotImplementedError(e_msg)
-        conflicts_by_move_dim = {k:0 for k in self.q_locs.keys()}
-        curr_coord = self.q_locs[move_queen]
-        # Check conflicts within move dim - Also, should this be a standalone function
-        # that just makes a conflict_by_dim dictionary?
-        queen_count_by_move_dim = Counter(v[move_dim] for v in self.q_locs.values())
-        for idx, q_count in queen_count_by_move_dim.items():
-            if idx == curr_coord[move_dim]:
-                conflicts_by_move_dim[idx] += q_count - 1
-            else:
-                conflicts_by_move_dim[idx] += q_count
-        # Check diagonals - Also, should this be a standalone function
-        # that just makes a conflict_by_dim dictionary?
-        other_queen_coords = [x for x in self.q_locs.values() if x != curr_coord]
-        for k in conflicts_by_move_dim.keys():
-            move_coord = self._get_orthogonal_move(curr_coord, move_dim, k)
-            diags = self.get_diagonals(move_coord)
-            diag_conf = set(diags).intersection(set(other_queen_coords))
-            conflicts_by_move_dim[k] += len(diag_conf)
-        # Then we would combine them?
-        # Removing the record in this dict for the queen's current position.
-        del(conflicts_by_move_dim[curr_coord[move_dim]])
-        return conflicts_by_move_dim
-
-
-    def _get_orthogonal_move(self, base_coord, move_dim, move_dest):
-        '''If we're moving in row space, our column stays constant and
-        vice versa
-        '''
-        constant_dim = 1 - move_dim
-        if move_dim == 1:
-            return (base_coord[constant_dim], move_dest)
-        return (move_dest, base_coord[constant_dim])
-
-
+        base_coord = self.q_locs[move_queen]
+        conf_dicts = [self._get_base_conflicts(base_coord, change_dim), 
+            self._orthogonal_conflicts_by_square(change_dim),
+            self._diagonal_conflicts_by_square(base_coord, change_dim)]
+        conf_smash = self.combine_conflict_counts(conf_dicts)
+        return {k:v for k,v in conf_smash.items() if k != base_coord[change_dim]}
 
 
     def get_queens_by_row(self):
@@ -378,6 +405,7 @@ if __name__ == "__main__":
     print(f"Unoccupied Rows: {foo.find_unoccupied_rows()}")
     print(f"MOVE DEEZ QUEENS: {foo.row_conflicted_queens()}")
     print("\n-----------")
+    
 
     print("Init from determined positions")
     bar = chessBoard(dimension = 8, state_string = "1112131415161718")
@@ -387,7 +415,7 @@ if __name__ == "__main__":
     print(f"MOVE DEEZ QUEENS: {bar.row_conflicted_queens()}")
     print("\n-----------")
 
-    ipdb.set_trace()
+
     
 
 
