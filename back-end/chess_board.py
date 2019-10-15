@@ -381,7 +381,7 @@ class chessBoard(object):
         '''
         rq = []
         for queens in self.get_queens_by_row().values():
-            rq.extend(queens[1:])
+            rq.extend(queens if len(queens) > 1 else [])
         return rq
 
 

@@ -285,17 +285,30 @@ class minConflictColumnSolver(baseSolver):
             blocked_coords = occupied_locs)
 
 
-    def queen_to_unoccupied_row(self):
-        '''Uh ... I think this should work, actually
+    def queen_to_unoccupied_row(self, break_conflicts = True):
+        '''This is the move srategy we employ if we are given a board with row 
+        conflicts. We take any queen in a row with two or more queens and move 
+        it to the first blank row we find.
+
+        In certain cases, we can't move a row conflicted queen to an empty row. 
+        At this point, we move any queen we possibly can by calling the method 
+        with the break_conflicts = False option.
         '''
-        row_conf_queens = self.board.row_conflicted_queens()
+        if break_conflicts:
+            queen_candidates = self.board.row_conflicted_queens()
+        else:
+            queen_candidates = [k for k in self.board.q_locs.keys()]
         unoccupied_rows = self.board.find_unoccupied_rows()
-        for qn in row_conf_queens:
-            new_row_coords = self.moves_within_column(qn)
-            for coord in new_row_coords:
+        for qn in queen_candidates:
+            new_coord_options = self.moves_within_column(qn)
+            for coord in new_coord_options:
                 if coord[0] in unoccupied_rows:
+                    resulting_state = self.board.get_state_string(qn, coord)
+                    if not self.check_if_state_is_new(resulting_state):
+                        continue
                     conflicts_by_row = self.board.count_conflicts_at_square(qn, 0)
                     return qn, coord, conflicts_by_row[coord[0]]
+        return self.queen_to_unoccupied_row(break_conflicts = False)
 
 
     def choose_next_move(self, verbose = False):
@@ -307,7 +320,7 @@ class minConflictColumnSolver(baseSolver):
         debugging but (at least for the time being, isn't surfaced now
         '''
         if self.board.is_row_conflicted():
-            return self.queen_to_unoccupied_row()
+            return self.queen_to_unoccupied_row(break_conflicts = True)
         return self.worst_queen_to_best_column(verbose = verbose)
 
        
@@ -381,6 +394,29 @@ if __name__ == "__main__":
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
     print("\n")
+
+    # Harder row-conflicted cases, along with non-pruned step chain
+    DEATH_ROW = [
+        "1326314451526162", # 25 steps
+        "1536373847487386", # 9 steps
+        "1733343543444588", # 18 steps
+        "2122343555566667", # 9 steps
+        "1121223335555682", # 9 steps
+        "1328353645555688", # 18 steps
+        "3362646572737475", # 49 steps
+        ]
+
+    for i, hard_state in enumerate(DEATH_ROW):
+        print(f"Solving hard state {i + 1} ...")
+        ipdb.set_trace()
+        cb = chessBoard(dimension = 8, state_string = hard_state)
+        sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+        sv.solve(verbose = True, stop_each = 10)
+        print("BOOYAH")
+        pprint(sv.walk_solution_path()["text"])
+        print(sv.solution_shortdoc())
+        print("\n")
+
 
     # Test case for pruning solution path
     cb = chessBoard(dimension = 8, state_string = "1525384358627583")
