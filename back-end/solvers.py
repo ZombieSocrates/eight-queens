@@ -168,6 +168,16 @@ class baseSolver(object):
         return out_json
 
 
+    def prune_and_retry(self):
+        '''Before we declare that we are at our move limit and exit the solver, 
+        prune the seen_states attribute.
+        '''
+        self.collapse_seen_states()
+        self.below_limit = self.check_if_moves_remain()
+        if self.below_limit:
+            self.solve()
+
+
     def solve(self):
         '''Only implemented in child classes
         '''
@@ -324,9 +334,9 @@ class minConflictColumnSolver(baseSolver):
         return self.worst_queen_to_best_column(verbose = verbose)
 
        
-    def solve(self, verbose = False, stop_each = None):
+    def solve(self, verbose = False, stop_each = None, retry_at_limit = True):
         '''This is the main public method, essentially repeats the following 
-        four  steps as long as the board isn't solved and we're under the move 
+        four steps as long as the board isn't solved and we're under the move 
         threshold for the solver
 
             - If there are unoccupied rows, move a queen to an unoccupied row
@@ -342,8 +352,6 @@ class minConflictColumnSolver(baseSolver):
             self.board.display()
         self.is_solved = self.check_if_solved(verbose = verbose)
         while not self.is_solved and self.below_limit:
-            # THIS IS WHERE WE SHOULD CHECK FOR ROW CONFLICTS AND
-            # GO INTO SOME SORT OF SUBROUTINE
             mv_queen, mv_coord, mv_conf = self.choose_next_move()
             if verbose:
                 self.document_chosen_move(cand_queen = mv_queen, 
@@ -356,6 +364,9 @@ class minConflictColumnSolver(baseSolver):
                     if verbose:
                         self.board.display()
                     ipdb.set_trace()
+        #If you hit your limit, first try to prune 
+        if not self.is_solved and retry_at_limit:
+            self.prune_and_retry()
 
 
     def random_queen_to_random_col(self):
@@ -390,13 +401,13 @@ if __name__ == "__main__":
     # Solution for a row conflicted board
     cb = chessBoard(dimension = 8, state_string = "1112131415161718")
     sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
-    sv.solve(verbose = True, stop_each = 7)
+    sv.solve(verbose = True)
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
     print("\n")
 
     # Harder row-conflicted cases, along with non-pruned step chain
-    DEATH_ROW = [
+    GNARLY_ROW_CONFLICTS = [
         "1326314451526162", # 25 steps
         "1536373847487386", # 9 steps
         "1733343543444588", # 18 steps
@@ -406,12 +417,11 @@ if __name__ == "__main__":
         "3362646572737475", # 49 steps
         ]
 
-    for i, hard_state in enumerate(DEATH_ROW):
-        print(f"Solving hard state {i + 1} ...")
-        ipdb.set_trace()
+    for i, hard_state in enumerate(GNARLY_ROW_CONFLICTS):
+        print(f"Solving hard state {i + 1}...")
         cb = chessBoard(dimension = 8, state_string = hard_state)
         sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
-        sv.solve(verbose = True, stop_each = 10)
+        sv.solve()
         print("BOOYAH")
         pprint(sv.walk_solution_path()["text"])
         print(sv.solution_shortdoc())
@@ -429,6 +439,25 @@ if __name__ == "__main__":
     sv.collapse_seen_states()
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
+
+    KNOWN_PRUNE_CASES = [
+        "1225314755687181",
+        "1428426673758284",
+        "1827374551667281"
+         # Something is still bizzare with the last case
+         # Running on frontend with retry_at_limit = False gives 43
+         # Running on frontend with retry_at_limit = True gives 49
+         # would love to understand what the difference is...
+        ]
+    for i, prune_case in enumerate(KNOWN_PRUNE_CASES):
+        print(f"Solving pruned case {i + 1}...")
+        for prune_opt in [False, True]:
+            cb = chessBoard(dimension = 8, state_string = prune_case)
+            sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+            print(f"\tPrune at move limit? {'yes' if prune_opt else 'no'}")
+            sv.solve(retry_at_limit = prune_opt)
+            print("\t",sv.solution_shortdoc())
+
     
 
 

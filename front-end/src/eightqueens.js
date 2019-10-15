@@ -254,11 +254,14 @@ using a fixed state as a test case for moving pieces, and putting each
 of the pieces in `piecesInPlay` at the appropriate places on the board
 */
 // let stateString = "1525384358627583"
-// let stateString = "1827374551667281"
 // let stateString = "1221354454637282"
 // let stateString = "1112131415161718"
 // let stateString = "1523253141727476"
 // let stateString = "3362646572737475"
+// let stateString = "1225314755687181"
+// let stateString = "1225314755687181"
+// let stateString = "1428426673758284"
+// let stateString = "1827374551667281"
 let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
 let queenLocs = getQueenLocations(b);
