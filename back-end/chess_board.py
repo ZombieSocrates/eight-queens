@@ -7,7 +7,8 @@ from collections import Counter, defaultdict
 class chessBoard(object):
 
 
-    def __init__(self, dimension, state_string = None, queen_seed = None):
+    def __init__(self, dimension, state_string = None, queen_seed = None, 
+        fully_random = False):
         '''Sets up a chess board of a specified dimension and puts queens at
         given positions or at entirely random positions. 
 
@@ -16,13 +17,18 @@ class chessBoard(object):
         sure that the positions aren't junky. 
 
         You can also leave state_string as None and supply a seed to put a 
-        queen randomly in each row.
+        queen randomly in each row. If you are doing that, you can specify
+        whether you want fully_random placement, or whether you want random
+        placement that ensures there will be no row conflicts...
 
         TODO: state_string will be more complicated if dimension is of 
         order of magnitude 2'''
         self.dim = dimension
         if state_string is None:
-            self.rows = self.random_queen_each_row(queen_seed)
+            if not fully_random:
+                self.rows = self.random_queen_each_row(queen_seed) 
+            else:
+                self.rows = self.fully_random_placement(queen_seed)
         elif not self.validate_state_string(state_string):
             raise NotImplementedError("I'm afraid I can't let you do that...")
         else:
@@ -52,6 +58,27 @@ class chessBoard(object):
             row[q_loc] = 1
             rows.append(row)
         return rows
+
+
+    def fully_random_placement(self, queen_seed):
+        locs_taken = []
+        random.seed(queen_seed)
+        rows = [[0] * self.dim for i in range(self.dim)]
+        while len(locs_taken) < self.dim:
+            loc = random.randint(0, self.dim**2 - 1)
+            if loc not in locs_taken:
+                rows[loc // self.dim][loc % self.dim] = 1
+                locs_taken.append(loc)
+        return rows
+
+    
+    def place_queens_from_state_string(self, state_string):
+        rows = [[0] * self.dim for i in range(self.dim)]
+        for i in range(self.dim):
+            r_ind = int(state_string[(2*i)]) - 1
+            c_ind = int(state_string[2*i + 1]) - 1
+            rows[r_ind][c_ind] = 1
+        return rows      
 
 
     def display(self):
@@ -150,15 +177,6 @@ class chessBoard(object):
             else:
                 loc_strs.append(f"{v[0] + 1}{v[1] + 1}")
         return "".join(loc_strs)
-
-
-    def place_queens_from_state_string(self, state_string):
-        rows = [[0] * self.dim for i in range(self.dim)]
-        for i in range(self.dim):
-            r_ind = int(state_string[(2*i)]) - 1
-            c_ind = int(state_string[2*i + 1]) - 1
-            rows[r_ind][c_ind] = 1
-        return rows       
 
 
     def _out_of_bounds(self, coord):
@@ -414,6 +432,8 @@ if __name__ == "__main__":
     print(f"Unoccupied Rows: {bar.find_unoccupied_rows()}")
     print(f"MOVE DEEZ QUEENS: {bar.row_conflicted_queens()}")
     print("\n-----------")
+
+    ipdb.set_trace()
 
 
     

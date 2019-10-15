@@ -115,25 +115,64 @@ function parseStateString(stateString) {
 
 /*
 Places n queens of a type specified by queenObj on the board given by
-boardObj. We either parse the positions from a stateString, or choose
-a random column for each row to have a queen
+boardObj. We either parse the positions from a stateString, or sample 
+without replacement from the potential squares on the board.
 */
-function placeQueens(boardObj, queensArray, stateString = null) {
+function placeQueens(boardObj, queensArray, stateString = null, fullyRandom = true) {
     if (stateString !== null) {
-        let placements = parseStateString(stateString);
-        placements.forEach(function(position) {
-            let idx = placements.indexOf(position);
-            boardObj.cell(position).place(queensArray[idx]);
-            }
-        )
+        placeFromStateString(boardObj, queensArray, stateString)
+    }
+    else if (fullyRandom) {
+        fullyRandomQueens(boardObj, queensArray)    
     }
     else {
-        for (i = 0; i < queensArray.length; i ++) {
-            j = Math.floor(Math.random() * queensArray.length)
-            boardObj.cell([i, j]).place(queensArray[i])
+        randomQueenEachColumn(boardObj, queensArray)
+    }
+};
+
+/*
+Given a predetermined queenStateString, place it as so
+*/
+function placeFromStateString(boardObj, queensArray, stateString) {
+    let placements = parseStateString(stateString);
+    placements.forEach(function(position) {
+        let idx = placements.indexOf(position);
+        boardObj.cell(position).place(queensArray[idx]);
+        }
+    )
+};
+
+/*
+Simply choose n random places out of the n**2 possibilities to 
+drop down the queens
+*/
+function fullyRandomQueens(boardObj, queensArray){
+    let takenPlaces = [];
+    while (takenPlaces.length < queensArray.length) {
+        let randomPlace = Math.floor(Math.random() * queensArray.length ** 2)
+        if (!takenPlaces.includes(randomPlace)) {
+            let i = Math.floor(randomPlace / queensArray.length);
+            let j = randomPlace % queensArray.length;
+            boardObj.cell([i,j]).place(queensArray[takenPlaces.length]);
+            takenPlaces.push(randomPlace);
         }
     }
 };
+
+
+
+/*
+Place a random queen within each column. Before I implemented row conflict 
+resolution, this was the default random placement strategy
+*/
+function randomQueenEachColumn(boardObj, queensArray) {
+    for (i = 0; i < queensArray.length; i ++) {
+        j = Math.floor(Math.random() * queensArray.length);
+        boardObj.cell([i,j]).place(queensArray[i])
+    }
+}
+
+
 
 /*
 Returns a column for a row in the jsboard matrix where a 
@@ -219,6 +258,7 @@ of the pieces in `piecesInPlay` at the appropriate places on the board
 // let stateString = "1221354454637282"
 // let stateString = "1112131415161718"
 // let stateString = "1523253141727476"
+// let stateString = "3362646572737475"
 let stateString = null;
 placeQueens(b, piecesInPlay, stateString);
 let queenLocs = getQueenLocations(b);
