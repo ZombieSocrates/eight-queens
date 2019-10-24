@@ -1,13 +1,7 @@
 import random
 
-from chess_board import chessBoard
-from solvers import minConflictColumnSolver
-
-
-    # TODO: 
-    # - KNOWN ISSUES: DEMO ROUTE 5 with a 25-queen board is broken. Probably because of state strings
-    # - minConflictColumnSolver could choose randomly if it can't do the best possible thing?
-    # - Or, that random thing could be another solver entirely
+from chess_board import ChessBoard
+from solvers import MinConflictColumnSolver
 
 
 DEMO_OPTS = ["Solve one case step-by-step", "Solve many random cases", 
@@ -31,7 +25,7 @@ DEMO_PARAMS = {
         "stop_each": None
     },
     "3":{
-        "seed_list": [42, 555, 5489, 666, 8675309, 999],  
+        "seed_list": [42, 555, 5489, 666, 8675309, 999, 7851],  
         "dim_each": 8, 
         "n_moves": 50, 
         "verbose": False, 
@@ -67,8 +61,8 @@ def solve_many_boards(seed_list, dim_each = 8, n_moves = 50,
     for i, s in enumerate(seed_list):
         if bcount > 1:
             print(f"Case {i+1} of {bcount} (seed {s})")
-        game = chessBoard(dimension = dim_each, queen_seed = s)
-        player = minConflictColumnSolver(board_object = game, max_moves = n_moves)
+        game = ChessBoard(dimension = dim_each, queen_seed = s)
+        player = MinConflictColumnSolver(board_object = game, max_moves = n_moves)
         player.solve(verbose = verbose, stop_each = stop_each)
         print(player.solution_shortdoc())
         print("-" * bcount, "\n")

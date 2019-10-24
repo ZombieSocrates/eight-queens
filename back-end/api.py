@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify, make_response
 from pprint import pprint
 
-from chess_board import chessBoard
-from solvers import minConflictColumnSolver
+from chess_board import ChessBoard
+from solvers import MinConflictColumnSolver
 
 app = Flask(__name__)
 
@@ -28,8 +28,8 @@ def solve_puzzle():
     board_state = request.args["state"]
     move_arg = request.args.get("max_moves")
     max_moves = 50 if move_arg is None else int(move_arg)
-    cboard = chessBoard(dimension = board_dim, state_string = board_state)
-    solver = minConflictColumnSolver(board_object = cboard, max_moves = max_moves)
+    cboard = ChessBoard(dimension = board_dim, state_string = board_state)
+    solver = MinConflictColumnSolver(board_object = cboard, max_moves = max_moves)
     solver.solve()
     rsp_data = solver.get_solution()
     rsp_headers = {"Content-Type":"application/json"}

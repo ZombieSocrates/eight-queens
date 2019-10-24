@@ -4,7 +4,7 @@ import ipdb
 from collections import Counter, defaultdict
 
 
-class chessBoard(object):
+class ChessBoard(object):
 
 
     def __init__(self, dimension, state_string = None, queen_seed = None, 
@@ -412,12 +412,12 @@ if __name__ == "__main__":
     print("Failing with an invalid initialization string")
     for junky_str in ["","555"]:
         try:
-            chessBoard(dimension = 8, state_string = junky_str)
+            ChessBoard(dimension = 8, state_string = junky_str)
         except NotImplementedError as e:
             print(f"\t{e}")
 
     print("Init from random number")
-    foo = chessBoard(dimension = 8, queen_seed = 42)
+    foo = ChessBoard(dimension = 8, queen_seed = 42)
     foo.display()
     print(f"Row conflicted? {foo.is_row_conflicted()}")
     print(f"Unoccupied Rows: {foo.find_unoccupied_rows()}")
@@ -426,7 +426,7 @@ if __name__ == "__main__":
     
 
     print("Init from determined positions")
-    bar = chessBoard(dimension = 8, state_string = "1112131415161718")
+    bar = ChessBoard(dimension = 8, state_string = "1112131415161718")
     bar.display()
     print(f"Row conflicted? {bar.is_row_conflicted()}")
     print(f"Unoccupied Rows: {bar.find_unoccupied_rows()}")

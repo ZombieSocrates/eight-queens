@@ -2,14 +2,14 @@ import random
 import ipdb
 
 from collections import Counter, defaultdict
-from chess_board import chessBoard
+from chess_board import ChessBoard
 from pprint import pprint
 
 
-class baseSolver(object):
+class BaseSolver(object):
     
 
-    def __init__(self, board_object, max_moves = 50):
+    def __init__(self, board_object, max_moves = 50, max_retries = 1):
         '''Any solver needs a board configuration that it will presumably 
         solve and a maximum number of moves to make in any solution. We check 
         to see if that initial configuration is already solved, and then build 
@@ -21,6 +21,8 @@ class baseSolver(object):
         self.n_moves = self.tally_moves_made()
         self.below_limit = self.check_if_moves_remain()
         self.is_solved = self.check_if_solved(verbose = False)
+        self.retry_limit = max_retries
+        self.n_retries = 0
         
 
     def check_if_state_is_new(self, next_state):
@@ -34,6 +36,12 @@ class baseSolver(object):
     def check_if_moves_remain(self):
         self.n_moves = self.tally_moves_made()
         return self.n_moves < self.move_limit
+
+
+    def check_if_retries_remain(self):
+        '''Friends dont let friends loop infinitely'''
+        self.n_retries += 1
+        return self.n_retries <= self.retry_limit 
 
 
     def check_if_solved(self, verbose = False):
@@ -174,7 +182,7 @@ class baseSolver(object):
         '''
         self.collapse_seen_states()
         self.below_limit = self.check_if_moves_remain()
-        if self.below_limit:
+        if self.below_limit and self.check_if_retries_remain():
             self.solve()
 
 
@@ -184,7 +192,7 @@ class baseSolver(object):
         raise NotImplementedError
 
 
-class minConflictColumnSolver(baseSolver):
+class MinConflictColumnSolver(BaseSolver):
     
 
     def prioritize_queens(self):
@@ -391,16 +399,16 @@ if __name__ == "__main__":
     
     #TODO: Maybe move these to a tests folder?
     # Solution for a non row-conflicted board
-    cb = chessBoard(dimension = 8, queen_seed = 42)
-    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    cb = ChessBoard(dimension = 8, queen_seed = 42)
+    sv = MinConflictColumnSolver(board_object = cb, max_moves = 50)
     sv.solve()
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
     print("\n")
 
     # Solution for a row conflicted board
-    cb = chessBoard(dimension = 8, state_string = "1112131415161718")
-    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    cb = ChessBoard(dimension = 8, state_string = "1112131415161718")
+    sv = MinConflictColumnSolver(board_object = cb, max_moves = 50)
     sv.solve(verbose = True)
     pprint(sv.walk_solution_path()["text"])
     print(sv.solution_shortdoc())
@@ -419,8 +427,8 @@ if __name__ == "__main__":
 
     for i, hard_state in enumerate(GNARLY_ROW_CONFLICTS):
         print(f"Solving hard state {i + 1}...")
-        cb = chessBoard(dimension = 8, state_string = hard_state)
-        sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+        cb = ChessBoard(dimension = 8, state_string = hard_state)
+        sv = MinConflictColumnSolver(board_object = cb, max_moves = 50)
         sv.solve()
         print("BOOYAH")
         pprint(sv.walk_solution_path()["text"])
@@ -429,8 +437,8 @@ if __name__ == "__main__":
 
 
     # Test case for pruning solution path
-    cb = chessBoard(dimension = 8, state_string = "1525384358627583")
-    sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+    cb = ChessBoard(dimension = 8, state_string = "1525384358627583")
+    sv = MinConflictColumnSolver(board_object = cb, max_moves = 50)
     print("ORIGINAL")
     sv.solve()
     pprint(sv.walk_solution_path()["text"])
@@ -445,15 +453,13 @@ if __name__ == "__main__":
         "1428426673758284",
         "1827374551667281"
          # Something is still bizzare with the last case
-         # Running on frontend with retry_at_limit = False gives 43
-         # Running on frontend with retry_at_limit = True gives 49
-         # would love to understand what the difference is...
+         # It breaks retry_at_limit behavor for reasons I don't understand...
         ]
     for i, prune_case in enumerate(KNOWN_PRUNE_CASES):
         print(f"Solving pruned case {i + 1}...")
         for prune_opt in [False, True]:
-            cb = chessBoard(dimension = 8, state_string = prune_case)
-            sv = minConflictColumnSolver(board_object = cb, max_moves = 50)
+            cb = ChessBoard(dimension = 8, state_string = prune_case)
+            sv = MinConflictColumnSolver(board_object = cb, max_moves = 50)
             print(f"\tPrune at move limit? {'yes' if prune_opt else 'no'}")
             sv.solve(retry_at_limit = prune_opt)
             print("\t",sv.solution_shortdoc())
