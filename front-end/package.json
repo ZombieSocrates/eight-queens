@@ -1,0 +1,19 @@
+{
+  "name": "front-end",
+  "version": "1.0.0",
+  "description": "The front end of my eight queens project",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZombieSocrates/eight-queens"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "lite-server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "lite-server": "^2.5.4"
+  }
+}

@@ -23,10 +23,26 @@ flask run
 In a browser, head to `localhost:5000/status` and you should see a message that says **Time to Move Some Queens**, which means you're good to go!
 
 ## front-end
-At current state, I'm just using [lite-server](https://github.com/johnpapa/lite-server), which comes with its own minimal setup instructions. With those taken care of, you can simply:
+At current state, I'm just using [lite-server](https://github.com/johnpapa/lite-server), which comes with its own setup instructions...
+```
+npm init -y
+npm install lite-server --save-dev
+```
+Then add the following to the resulting `package.json` file
+```
+  "scripts": {
+    "dev": "lite-server"
+  },
+```
+The only other thing you'll then need to do is pull down the JSBoard submodule with
+```
+git submodule update --init
+```
+
+From there you are ready to serve up some queens.
 ```
 cd front-end
-lite-server
+npm run dev
 ```
 
 Head to `localhost:3000` and you are ready for the app in all its glory.
