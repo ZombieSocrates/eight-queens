@@ -1,10 +1,22 @@
 <template>
-  <td class="cell" @click="changeColor()" :style="getColor()"> </td>
+
+  <td class="cell" @click="setActive()" :style="getColor()">
+    <li v-if="hasQueen" class='queen'>
+      <icon name="chess-queen" scale=4></icon>
+    </li>
+  </td>
+
 </template>
 
 <script>
+
+import 'vue-awesome/icons/chess-queen'
+
+import Icon from 'vue-awesome/components/Icon'
+
 export default {
   name: 'Cell',
+  components: { Icon },
   props: {
     'coordinate': {
       type: Array,
@@ -26,18 +38,19 @@ export default {
     }
   },
   data: function () {
+    // uncertain whether some of this should be moved into HTML classes
     return {
       hasQueen: true,
       active: false
     }
   },
   methods: {
-    changeColor () {
+    setActive: function () {
       if (this.hasQueen) {
-        this.active = true
+        this.active = !this.active
       }
     },
-    getColor () {
+    getColor: function () {
       // may evolve into a more complex switch statement
       if (!this.active) {
         return { backgroundColor: this.defaultColor }
@@ -46,6 +59,7 @@ export default {
     }
   }
 }
+
 </script>
 
 <style>
@@ -54,6 +68,12 @@ export default {
   width: 90px;
   height: 90px;
   border: 2px solid #2c3e50;
+}
+
+.queen {
+  color: #f3d23e;
+  list-style-type: none;
+  display: inline-block;
 }
 
 </style>
