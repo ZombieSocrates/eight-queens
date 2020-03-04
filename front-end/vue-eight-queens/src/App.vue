@@ -1,21 +1,18 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <!-- <HelloWorld msg="You are bad at vue"/> -->
-    <Cell></Cell>
-    <Cell :coordinate="[0,1]"></Cell>
+   <!--  <Cell></Cell>
+    <Cell :coordinate="[0,1]"></Cell> -->
+    <Board></Board>
   </div>
 </template>
 
 <script>
-// import HelloWorld from '@/components/HelloWorld'
-import Cell from '@/components/Cell'
+import Board from '@/components/Board'
 
 export default {
   name: 'app',
   components: {
-    // HelloWorld,
-    Cell
+    Board
   }
 }
 </script>
