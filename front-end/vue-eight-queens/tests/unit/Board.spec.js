@@ -1,4 +1,4 @@
-import { shallowMount } from '@vue/test-utils'
+import { shallowMount, mount } from '@vue/test-utils'
 import Board from '@/components/Board'
 
 describe('Board', () => {
@@ -27,5 +27,22 @@ describe('Board', () => {
     const colCount = cellCount / testBoard.vm.dimension
     console.log(`Column count is ${colCount}`)
     expect(colCount).toEqual(testBoard.vm.dimension)
+  })
+
+  it('has the same number of queens as props.queens_count', () => {
+    // must use mount here because I need the cell within the board ...
+    const testBoard = mount(Board, {
+      propsData: {
+        dimension: 3,
+        queens_count: 3
+      }
+    })
+    const queensCount = testBoard.vm.queens_count
+    console.log(`Queens on the board: ${queensCount}`)
+    console.log(testBoard.vm.initialState)
+    let queenCellArray = testBoard
+      .findAll({name: 'Cell'})
+      .filter(w => w.vm.$data.hasQueen)
+    expect(queenCellArray.length).toEqual(queensCount)
   })
 })

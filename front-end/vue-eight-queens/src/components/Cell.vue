@@ -40,7 +40,7 @@ export default {
   data: function () {
     // uncertain whether some of this should be moved into HTML classes
     return {
-      hasQueen: true,
+      hasQueen: this.checkOccupancy(),
       active: false
     }
   },
@@ -56,6 +56,11 @@ export default {
         return { backgroundColor: this.defaultColor }
       }
       return { backgroundColor: '#90ee90' }
+    },
+    checkOccupancy: function () {
+      let stateString = JSON.stringify(this.$parent.initialState)
+      let cellCoord = JSON.stringify(this.coordinate)
+      return stateString.indexOf(cellCoord) > -1
     }
   }
 }
