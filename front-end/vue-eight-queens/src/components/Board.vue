@@ -32,15 +32,8 @@ export default {
     }
   },
   // data: function () {
-  //   out = {
-  //     positions: []
-  //   }
-  //   for (let q = 0, q < this.queens_count, q++) {
-  //       let p_r = parseInt(this.initialState[2*q])
-  //       let p_q = parseInt(this.initialState[2*q + 1])
-  //       out.positions.push([p_r, p_q])
-  //   }
-  //   return out
+  //   moves: count of moves
+  //   statesSeen: array of states?
   // }
   methods: {
     getCellKey: function (rowInd, colInd) {
@@ -49,20 +42,34 @@ export default {
     getRowKey: function (rowInd) {
       // probably could've just had this return an integer but meh
       return `row-${rowInd}`
+    },
+    cellKeyAsState: function (cellKey) {
+      let rowValue = Math.floor(cellKey / this.dimension) + 1
+      let columnValue = (cellKey % this.dimension) + 1
+      return `${rowValue}${columnValue}`
     }
+    // will need some updatePositions method
   },
   computed: {
     initialState: function () {
-      // let stateString = ''
-      let takenCells = []
-      while (takenCells.length < this.queens_count) {
-        let randCell = Math.floor(Math.random() *
+      let stateString = ''
+      let takenKeys = []
+      while (stateString.length < this.queens_count * 2) {
+        let randKey = Math.floor(Math.random() *
           Math.pow(this.dimension, 2))
-        if (!takenCells.includes(randCell)) {
-          let r = Math.floor(randCell / this.dimension)
-          let c = randCell % this.dimension
-          takenCells.push([r, c])
+        if (!takenKeys.includes(randKey)) {
+          takenKeys.push(randKey)
+          stateString = `${stateString}${this.cellKeyAsState(randKey)}`
         }
+      }
+      return stateString
+    },
+    positions: function () {
+      let takenCells = []
+      for (let i = 0; i < this.queens_count; i++) {
+        let rowPos = parseInt(this.initialState[2 * i]) - 1
+        let colPos = parseInt(this.initialState[2 * i + 1]) - 1
+        takenCells.push([rowPos, colPos])
       }
       return takenCells
     }

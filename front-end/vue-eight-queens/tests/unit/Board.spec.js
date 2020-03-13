@@ -40,6 +40,7 @@ describe('Board', () => {
     const queensCount = testBoard.vm.queens_count
     console.log(`Queens on the board: ${queensCount}`)
     console.log(testBoard.vm.initialState)
+    console.log(testBoard.vm.positions)
     let queenCellArray = testBoard
       .findAll({name: 'Cell'})
       .filter(w => w.vm.$data.hasQueen)

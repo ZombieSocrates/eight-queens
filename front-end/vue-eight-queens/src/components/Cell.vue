@@ -58,7 +58,12 @@ export default {
       return { backgroundColor: '#90ee90' }
     },
     checkOccupancy: function () {
-      let stateString = JSON.stringify(this.$parent.initialState)
+      /* stupid hack to make my Cell unit tests pass when the cell
+      is being mounted  without a  parent Board. */
+      if (this.$parent.positions === undefined) {
+        return false
+      }
+      let stateString = JSON.stringify(this.$parent.positions)
       let cellCoord = JSON.stringify(this.coordinate)
       return stateString.indexOf(cellCoord) > -1
     }
