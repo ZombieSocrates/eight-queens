@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <Board :dimension=5 :startState="'1122334455'"></Board>
+    <Board></Board>
   </div>
 </template>
 

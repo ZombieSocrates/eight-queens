@@ -1,6 +1,6 @@
 <template>
 
-  <table class="board">
+  <table class="board" :key=currentState>
     <tr v-for="(rowInd, i) in dimension" class="row" :key="getRowKey(rowInd)">
       <Cell v-for="(colInd, j) in dimension" :key="getCellKey(rowInd, colInd)" :coordinate="[i, j]"></Cell>
     </tr>
@@ -38,8 +38,7 @@ export default {
   data: function () {
     return {
       moves: 0,
-      currentState: this.startState,
-      queenLocations: []
+      currentState: this.startState
     }
   },
   methods: {
@@ -80,12 +79,16 @@ export default {
       }
       return takenCells
     }
-    // will need some updatePositions method
   },
   created: function () {
     this.currentState = this.initializeState()
-    this.queenLocations = this.placeQueens()
+  },
+  computed: {
+    queenLocations: function () {
+      return this.placeQueens()
+    }
   }
+
 }
 
 </script>
