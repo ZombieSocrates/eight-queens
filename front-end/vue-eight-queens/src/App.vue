@@ -1,8 +1,6 @@
 <template>
   <div id="app">
-   <!--  <Cell></Cell>
-    <Cell :coordinate="[0,1]"></Cell> -->
-    <Board></Board>
+    <Board :dimension=5 :startState="'1122334455'"></Board>
   </div>
 </template>
 

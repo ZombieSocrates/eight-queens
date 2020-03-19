@@ -23,18 +23,25 @@ export default {
         return value >= 3
       }
     },
-    'queens_count': {
+    'queensCount': {
       type: Number,
       default: 8,
       validator: function (value) {
         return value >= 0
       }
+    },
+    'startState': {
+      type: String,
+      default: null
     }
   },
-  // data: function () {
-  //   moves: count of moves
-  //   statesSeen: array of states?
-  // }
+  data: function () {
+    return {
+      moves: 0,
+      currentState: this.startState,
+      queenLocations: []
+    }
+  },
   methods: {
     getCellKey: function (rowInd, colInd) {
       return (rowInd - 1) * this.dimension + colInd
@@ -47,14 +54,14 @@ export default {
       let rowValue = Math.floor(cellKey / this.dimension) + 1
       let columnValue = (cellKey % this.dimension) + 1
       return `${rowValue}${columnValue}`
-    }
-    // will need some updatePositions method
-  },
-  computed: {
-    initialState: function () {
+    },
+    initializeState: function () {
+      return this.startState === null ? this.getRandomState() : this.startState
+    },
+    getRandomState: function () {
       let stateString = ''
       let takenKeys = []
-      while (stateString.length < this.queens_count * 2) {
+      while (stateString.length < this.queensCount * 2) {
         let randKey = Math.floor(Math.random() *
           Math.pow(this.dimension, 2))
         if (!takenKeys.includes(randKey)) {
@@ -64,17 +71,21 @@ export default {
       }
       return stateString
     },
-    positions: function () {
+    placeQueens: function () {
       let takenCells = []
-      for (let i = 0; i < this.queens_count; i++) {
-        let rowPos = parseInt(this.initialState[2 * i]) - 1
-        let colPos = parseInt(this.initialState[2 * i + 1]) - 1
+      for (let i = 0; i < this.queensCount; i++) {
+        let rowPos = parseInt(this.currentState[2 * i]) - 1
+        let colPos = parseInt(this.currentState[2 * i + 1]) - 1
         takenCells.push([rowPos, colPos])
       }
       return takenCells
     }
+    // will need some updatePositions method
+  },
+  created: function () {
+    this.currentState = this.initializeState()
+    this.queenLocations = this.placeQueens()
   }
-
 }
 
 </script>

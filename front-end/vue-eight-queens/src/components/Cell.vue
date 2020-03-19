@@ -40,7 +40,7 @@ export default {
   data: function () {
     // uncertain whether some of this should be moved into HTML classes
     return {
-      hasQueen: this.checkOccupancy(),
+      hasQueen: false,
       active: false
     }
   },
@@ -60,13 +60,16 @@ export default {
     checkOccupancy: function () {
       /* stupid hack to make my Cell unit tests pass when the cell
       is being mounted  without a  parent Board. */
-      if (this.$parent.positions === undefined) {
+      if (this.$parent.queenLocations === undefined) {
         return false
       }
-      let stateString = JSON.stringify(this.$parent.positions)
+      let stateString = JSON.stringify(this.$parent.queenLocations)
       let cellCoord = JSON.stringify(this.coordinate)
       return stateString.indexOf(cellCoord) > -1
     }
+  },
+  created: function () {
+    this.hasQueen = this.checkOccupancy()
   }
 }
 
