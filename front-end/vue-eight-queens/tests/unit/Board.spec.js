@@ -9,9 +9,7 @@ describe('Board', () => {
         dimension: 3
       }
     })
-    // console.log(`Dimension is ${testBoard.vm.dimension}`)
     const rowCount = testBoard.findAll('.row').length
-    // console.log(`Row count is ${rowCount}`)
     expect(rowCount).toEqual(testBoard.vm.dimension)
 
   })
@@ -22,10 +20,8 @@ describe('Board', () => {
         dimension: 6
       }
     })
-    // console.log(`Dimension is ${testBoard.vm.dimension}`)
     const cellCount = testBoard.findAll({name: 'Cell'}).length
     const colCount = cellCount / testBoard.vm.dimension
-    // console.log(`Column count is ${colCount}`)
     expect(colCount).toEqual(testBoard.vm.dimension)
   })
 
@@ -38,10 +34,6 @@ describe('Board', () => {
       }
     })
     const queensCount = testBoard.vm.queensCount
-    // console.log(`Queens on the board: ${queensCount}`)
-    // console.log(`prop.StartState: ${testBoard.vm.startState}`)
-    // console.log(`Randomly generated state: ${testBoard.vm.currentState}`)
-    // console.log(testBoard.vm.queenLocations)
     let queenCellArray = testBoard
       .findAll({name: 'Cell'})
       .filter(w => w.vm.$data.hasQueen)
@@ -57,15 +49,78 @@ describe('Board', () => {
       }
     })
     const queensCountPrior = testBoard.vm.queensCount
-    console.log(`Queens on the board: ${queensCountPrior}`)
-    console.log(`State Before: ${testBoard.vm.currentState}`)
     testBoard.setData({currentState:'11'})
-    console.log(`State After: ${testBoard.vm.currentState}`)
     let cellArray = testBoard
       .findAll({name: 'Cell'})
     expect(cellArray.at(0).vm.$data.hasQueen).toBe(true)
     let queensCountAfter = cellArray
       .filter(w => w.vm.$data.hasQueen).length
     expect(queensCountPrior).toEqual(queensCountAfter)
+  })
+
+  it('errors when you put a queen in a cell that doesn\'t exist', () =>{
+    expect(() => {
+      let testBoard = shallowMount(Board, {
+        propsData: {
+          dimension: 8,
+          queensCount: 1,
+          startState: '11'
+          }
+      })
+      testBoard.setData({currentState: '19'})
+      return testBoard.vm.validBoardState
+    }).toThrowError('Queen Out Of Range')
+    expect(() => { shallowMount(Board, {
+        propsData: {
+          dimension: 8,
+          queensCount: 1,
+          startState: '08'
+          }
+      }).vm.validBoardState
+    }).toThrowError('Queen Out Of Range')
+  })
+
+  it('errors when data.currentState doesn\'t specify proper number of queens', () =>{
+    expect(() => { shallowMount(Board, {
+        propsData: {
+          dimension: 4,
+          queensCount: 2,
+          startState: '13'
+          }
+      }).vm.validBoardState
+    }).toThrowError('Improper Number of Queens')
+    expect(() => {
+      let testBoard = shallowMount(Board, {
+        propsData: {
+          dimension: 8,
+          queensCount: 3,
+          startState: '118855'
+          }
+      })
+      testBoard.setData({currentState: '11885577'})
+      return testBoard.vm.validBoardState
+    }).toThrowError('Improper Number of Queens')
+  })
+
+  it('errors when data.currentState includes duplicate positions', () => {
+    expect(() => { shallowMount(Board, {
+        propsData: {
+          dimension: 5,
+          queensCount: 3,
+          startState: '123412'
+          }
+      }).vm.validBoardState
+    }).toThrowError('Duplicate Queen Positions')
+    expect(() => {
+      let testBoard = shallowMount(Board, {
+        propsData: {
+          dimension: 7,
+          queensCount: 3,
+          startState: '112233'
+          }
+      })
+      testBoard.setData({currentState: '223322'})
+      return testBoard.vm.validBoardState
+    }).toThrowError('Duplicate Queen Positions')
   })
 })

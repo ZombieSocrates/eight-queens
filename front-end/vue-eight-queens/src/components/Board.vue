@@ -58,17 +58,42 @@ export default {
       return this.startState === null ? this.getRandomState() : this.startState
     },
     getRandomState: function () {
-      let stateString = ''
+      let outState = ''
       let takenKeys = []
-      while (stateString.length < this.queensCount * 2) {
+      while (outState.length < this.queensCount * 2) {
         let randKey = Math.floor(Math.random() *
           Math.pow(this.dimension, 2))
         if (!takenKeys.includes(randKey)) {
           takenKeys.push(randKey)
-          stateString = `${stateString}${this.cellKeyAsState(randKey)}`
+          outState = `${outState}${this.cellKeyAsState(randKey)}`
         }
       }
-      return stateString
+      return outState
+    },
+    coordsInBounds: function () {
+      for (let d of this.currentState) {
+        if ((parseInt(d) < 1) || (parseInt(d) > this.dimension)) {
+          throw new TypeError('Queen Out Of Range')
+        }
+      }
+      return true
+    },
+    correctQueensCount: function () {
+      if (this.currentState.length !== this.queensCount * 2) {
+        throw new TypeError('Improper Number of Queens')
+      }
+      return true
+    },
+    noDupePositions: function () {
+      let occKeys = []
+      for (let loc of this.queenLocations) {
+        let locKey = this.getCellKey(loc[0], loc[1])
+        if (occKeys.includes(locKey)) {
+          throw new TypeError('Duplicate Queen Positions')
+        }
+        occKeys.push(locKey)
+      }
+      return true
     },
     placeQueens: function () {
       let takenCells = []
@@ -83,9 +108,19 @@ export default {
   created: function () {
     this.currentState = this.initializeState()
   },
+  // TODO: The errors are thrown, but they stay within the component
+  // updated: function () {
+  //   if (this.validBoardState !== true) {
+  //     alert(this.validBoardState)
+  //   }
+  // },
   computed: {
     queenLocations: function () {
       return this.placeQueens()
+    },
+    validBoardState: function () {
+      return (this.coordsInBounds() && this.correctQueensCount() &&
+        this.noDupePositions())
     }
   }
 
